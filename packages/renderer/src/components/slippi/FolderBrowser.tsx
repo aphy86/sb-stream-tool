@@ -12,7 +12,16 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
   const [directory, setDirectory] = useHydratedState(savedDirectory);
 
   return (
-    <div className="flex items-center flex-col gap-4 border-t-2 p-4 w-full">
+    <form
+      onSubmit={() => {
+        update(directory);
+        send("slippi-relay/start", {
+          type: "folder",
+          listenPath: directory,
+        } as SlippiRelayConfig).catch((reason) => console.log(reason));
+      }}
+      className="flex items-center flex-col gap-4 border-t-2 p-4 w-full"
+    >
       <div className="flex flex-col gap-2">
         <h1 className="text-center font-semibold text-xl">
           Connect to relay manually
@@ -41,20 +50,7 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
           </div>
         </div>
         <div className="flex gap-2 w-full justify-center">
-          <Button
-            disabled={disabled}
-            type="button"
-            // className="w-full"
-            onClick={() => {
-              update(directory);
-              send("slippi-relay/start", {
-                type: "folder",
-                listenPath: directory,
-              } as SlippiRelayConfig).catch((reason) => console.log(reason));
-            }}
-          >
-            Save and start reading
-          </Button>
+          <Button disabled={disabled}>Save and start reading</Button>
           <Button
             type="button"
             onClick={() => {
@@ -66,7 +62,7 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
           </Button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 

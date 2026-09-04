@@ -19,7 +19,29 @@ function ConsoleConnection() {
   const [ip, setIp] = useState(savedIp);
   const [port, setPort] = useState(savedPort.toString());
   return (
-    <div className="flex items-center flex-col gap-8 border-t-2 p-4 w-full">
+    <form
+      onSubmit={() => {
+        const portNum = parseInt(port);
+        if (!Number.isNaN(portNum)) {
+          update(ip, portNum);
+          send("slippi-relay/start", {
+            type: "console",
+            ip: ip,
+            port: portNum,
+          } as SlippiRelayConfig);
+          write({
+            wiiIp: ip,
+            wiiPort: portNum,
+          });
+        } else {
+          sendToastMessage(
+            "Slippi Wii Relay Syntax error",
+            "Port is not a number!",
+          );
+        }
+      }}
+      className="flex items-center flex-col gap-8 border-t-2 p-4 w-full"
+    >
       <div className="flex flex-col gap-2">
         <h1 className="text-center font-semibold text-xl">
           Connect to a Wii relay (recommended method)
@@ -43,34 +65,10 @@ function ConsoleConnection() {
         </div>
       </div>
       <div className="flex flex-col gap-3 w-full">
-        <Button
-          type="button"
-          onClick={() => {
-            const portNum = parseInt(port);
-            if (!Number.isNaN(portNum)) {
-              update(ip, portNum);
-              send("slippi-relay/start", {
-                type: "console",
-                ip: ip,
-                port: portNum,
-              } as SlippiRelayConfig);
-              write({
-                wiiIp: ip,
-                wiiPort: portNum,
-              });
-            } else {
-              sendToastMessage(
-                "Slippi Wii Relay Syntax error",
-                "Port is not a number!",
-              );
-            }
-          }}
-        >
-          Connect
-        </Button>
+        <Button>Connect</Button>
         <Button type="button">Disconnect</Button>
       </div>
-    </div>
+    </form>
   );
 }
 
