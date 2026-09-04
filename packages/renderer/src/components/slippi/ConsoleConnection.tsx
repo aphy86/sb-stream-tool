@@ -22,8 +22,12 @@ function ConsoleConnection() {
     <div className="flex items-center flex-col gap-8 border-t-2 p-4 w-full">
       <div className="flex flex-col gap-2">
         <h1 className="text-center font-semibold text-xl">
-          Connect to a Wii relay
+          Connect to a Wii relay (recommended method)
         </h1>
+        <h2>
+          Note that you must have launched Slippi Melee in order to connect!
+          (and ensure the slippi networking feature is on)
+        </h2>
       </div>
       <div className="flex gap-2">
         <div className="flex flex-col gap-1">

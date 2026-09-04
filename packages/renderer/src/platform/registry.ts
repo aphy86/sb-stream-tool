@@ -20,7 +20,7 @@ export function defaultPlatform(): TournamentPlatform {
   return PLATFORMS[0];
 }
 
-export function platformForEventUrl(url: string): TournamentPlatform {
+export function getPlatformByEventUrl(url: string): TournamentPlatform {
   const eventId = resolveEventUrl(url);
   return eventId ? platformById(eventId.platform) : defaultPlatform();
 }

@@ -22,7 +22,7 @@ import {
   isInPlacementList,
 } from "@renderer/utils/helpers";
 import { usePlayerFormFieldArrayContext } from "@renderer/hooks/use-player-form-field-array-context";
-import { platformForEventUrl } from "@renderer/platform/registry";
+import { getPlatformByEventUrl } from "@renderer/platform/registry";
 
 function SetQuery() {
   const [setId, setSetId] = useState("");
@@ -31,7 +31,7 @@ function SetQuery() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | undefined>(undefined);
   const eventUrl = useSettingsStore((state) => state.eventUrl);
-  const platform = platformForEventUrl(eventUrl);
+  const platform = getPlatformByEventUrl(eventUrl);
   const apiKey = useSettingsStore(
     (state) => state.credentials[platform.id] ?? "",
   );

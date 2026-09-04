@@ -15,9 +15,6 @@ import { isPlainObject } from "es-toolkit";
 import { EventStream } from "./EventStream.js";
 
 const EVENT_URL_DB_KEY = "event-url";
-const LEGACY_API_KEY_DB_KEY = "startgg-api-key";
-const LEGACY_EVENT_URL_DB_KEY = "startgg-tournament-url";
-const LEGACY_STARTGG_PLATFORM = "startgg";
 
 function platformApiKeyDbKey(platform: string) {
   return `platform:${platform}:api-key`;
@@ -76,14 +73,12 @@ export class SettingsStore {
     if (this.isSlippiRelaySettings(jsonSavedSettings)) {
       Object.assign(jsonSavedSettings, settings);
       const serializedSettings = await this.serialize(jsonSavedSettings);
-      console.log(serializedSettings)
       await db.transaction(async (txn: Transaction) => {
         txn.put("slippi-relay-settings", serializedSettings);
       });
 
       EventStream.notify("Slippi Relay", "Successfully saved Relay settings!");
     }
-    console.log(jsonSavedSettings)
     db.close();
   }
 
@@ -91,17 +86,13 @@ export class SettingsStore {
     const db = RocksDatabase.open(this.storePath);
 
     const savedSettings = await db.get("slippi-relay-settings");
+    db.close();
     let jsonSavedSettings;
-    console.log(savedSettings)
     try {
       jsonSavedSettings = JSON.parse(savedSettings);
-      console.log("jsonSavedSettings")
-      console.log(jsonSavedSettings)
     } catch {
-      db.close();
       return undefined;
     }
-
     if (this.isSlippiRelaySettings(jsonSavedSettings)) {
       const settings: SlippiRelaySettings = {
         relayStatus: jsonSavedSettings.relayStatus,
@@ -111,10 +102,8 @@ export class SettingsStore {
         dolphinIp: jsonSavedSettings.dolphinIp,
         dolphinPort: jsonSavedSettings.dolphinPort,
       };
-      db.close();
       return settings;
     }
-    db.close();
     return undefined;
   }
 
@@ -159,7 +148,7 @@ export class SettingsStore {
     db.close();
     EventStream.notify(
       "toast",
-      "Start.gg API Key",
+      `${platform} API Key`,
       "Successfully saved API Key!",
     );
   }
@@ -171,16 +160,17 @@ export class SettingsStore {
     const db = RocksDatabase.open(this.storePath);
     const key = await db.get(platformApiKeyDbKey(platform));
     // Keys used to be stored per-app rather than per-platform.
-    const legacy =
-      platform === LEGACY_STARTGG_PLATFORM && !isApiKey(key)
-        ? await db.get(LEGACY_API_KEY_DB_KEY)
-        : undefined;
+    // const legacy =
+    //   platform === LEGACY_STARTGG_PLATFORM && !isApiKey(key)
+    //     ? await db.get(LEGACY_API_KEY_DB_KEY)
+    //     : undefined;
     db.close();
 
     if (isApiKey(key)) {
       return key;
     }
-    return isApiKey(legacy) ? legacy : "";
+    // return isApiKey(legacy) ? legacy : "";
+    return "";
   }
 
   static async writeEventUrl(url: string) {
@@ -201,15 +191,16 @@ export class SettingsStore {
 
     const db = RocksDatabase.open(this.storePath);
     const url = await db.get(EVENT_URL_DB_KEY);
-    const legacy = isUrl(url)
-      ? undefined
-      : await db.get(LEGACY_EVENT_URL_DB_KEY);
+    // const legacy = isUrl(url)
+    //   ? undefined
+    //   : await db.get(LEGACY_EVENT_URL_DB_KEY);
     db.close();
 
     if (isUrl(url)) {
       return url;
     }
-    return isUrl(legacy) ? legacy : "";
+    // return isUrl(legacy) ? legacy : "";
+    return "";
   }
 
   static async getObsWebsocketSettings() {

@@ -24,8 +24,8 @@ import { useFormContext } from "react-hook-form";
 import { Tournament } from "@app/common";
 import { usePlayerFormFieldArrayContext } from "../hooks/use-player-form-field-array-context";
 import {
+  getPlatformByEventUrl,
   platformById,
-  platformForEventUrl,
   resolveEventUrl,
 } from "@renderer/platform/registry";
 import { FetchProgress, PlatformSet } from "@renderer/platform/types";
@@ -36,7 +36,7 @@ function EventSets() {
   const savedEventSlug = useSettingsStore((state) => state.eventSlug);
   const savedEventUrl = useSettingsStore((state) => state.eventUrl);
   const savedApiKey = useSettingsStore(
-    (state) => state.credentials[platformForEventUrl(savedEventUrl).id] ?? "",
+    (state) => state.credentials[getPlatformByEventUrl(savedEventUrl).id] ?? "",
   );
   const currentEventSlug = useRef("");
   const totalPagesRef = useRef(1); // for the for loop

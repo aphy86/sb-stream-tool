@@ -14,12 +14,13 @@ import EventSets from "./EventSets";
 import LiveEventSets from "./LiveEventSets";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { onSubmit } from "@renderer/utils/helpers";
-import { platformForEventUrl } from "@renderer/platform/registry";
+import { getPlatformByEventUrl } from "@renderer/platform/registry";
 // import { sendToastMessage } from "./ui/toast";
 
 function Match() {
   const eventUrl = useSettingsStore((state) => state.eventUrl);
-  const platform = platformForEventUrl(eventUrl);
+  const eventSlug = useSettingsStore((state) => state.eventSlug);
+  const platform = getPlatformByEventUrl(eventUrl);
   const apiKey = useSettingsStore(
     (state) => state.credentials[platform.id] ?? "",
   );
@@ -34,12 +35,13 @@ function Match() {
 
   return (
     <div className="flex flex-col gap-2">
-      {apiKey === "" && (
+      {apiKey === "" && eventUrl !== "" && (
         <Alert>
           <AlertCircleIcon />
           <AlertTitle>
             You must have a {platform.displayName} api key in order to use the
-            automated set fetching tools (go to settings to set it!)
+            automated set fetching tools for the event ${eventSlug} (go to
+            settings to set it!)
           </AlertTitle>
         </Alert>
       )}
