@@ -20,7 +20,8 @@ function ConsoleConnection() {
   const [port, setPort] = useState(savedPort.toString());
   return (
     <form
-      onSubmit={() => {
+      onSubmit={(e) => {
+        e.preventDefault();
         const portNum = parseInt(port);
         if (!Number.isNaN(portNum)) {
           update(ip, portNum);

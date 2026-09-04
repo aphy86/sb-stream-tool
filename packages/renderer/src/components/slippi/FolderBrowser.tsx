@@ -16,7 +16,8 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
 
   return (
     <form
-      onSubmit={() => {
+      onSubmit={(e) => {
+        e.preventDefault();
         update(directory);
         send("slippi-relay/start", {
           type: "folder",
