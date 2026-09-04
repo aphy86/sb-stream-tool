@@ -9,6 +9,9 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
     (state) => state.slippiRelayDirectory,
   );
   const update = useSettingsStore((state) => state.updateSlippiRelayDirectory);
+  const write = useSettingsStore(
+    (state) => state.writeSlippiRelaySettingsToFile,
+  );
   const [directory, setDirectory] = useHydratedState(savedDirectory);
 
   return (
@@ -19,6 +22,9 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
           type: "folder",
           listenPath: directory,
         } as SlippiRelayConfig).catch((reason) => console.log(reason));
+        write({
+          directory: directory,
+        });
       }}
       className="flex items-center flex-col gap-4 border-t-2 p-4 w-full"
     >

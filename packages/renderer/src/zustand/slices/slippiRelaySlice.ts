@@ -74,8 +74,8 @@ export const createSlippiRelaySlice: StateCreator<
   },
   updateSlippiDolphinRelayConnection: (newIp, newPort) => {
     set((state) => {
-      state.slippiWiiRelayIp = newIp;
-      state.slippiWiiRelayPort = newPort;
+      state.slippiDolphinRelayIp = newIp;
+      state.slippiDolphinRelayPort = newPort;
     });
   },
   updateSlippiRelayStatus: (newRelayStatus: SlippiRelayStatus) => {
