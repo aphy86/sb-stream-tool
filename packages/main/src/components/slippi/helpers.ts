@@ -1,4 +1,11 @@
-import { SlippiGameData, SlippiGameEndData, SlippiPlayer } from "@app/common";
+import {
+  meleeCharacters,
+  SlippiGameData,
+  SlippiGameEndData,
+  SlippiPlayer,
+  MeleeCharacter,
+  meleeAltCostumes,
+} from "@app/common";
 import {
   FrameEntryType,
   GameEndMethod,
@@ -195,7 +202,9 @@ function getFfaWinnersFallback(players: PostFrameUpdateType[]): number[] {
     winner.playerIndex ? [winner.playerIndex] : [],
   );
 }
-export function getStartGameData(settings: GameStartType): SlippiGameData {
+export function getStartGameData(
+  settings: GameStartType,
+): SlippiGameData | undefined {
   const playerData = [] as SlippiPlayer[][];
   let isTeams = settings.isTeams;
   if (!isTeams) {
@@ -259,6 +268,21 @@ export function getStartGameData(settings: GameStartType): SlippiGameData {
       }
     }
   }
+
+  for (let i = 0; i < playerData.length; i++) {
+    for (let j = 0; j < playerData[i].length; j++) {
+      const player = playerData[i][j];
+      if (
+        !(meleeCharacters as string[]).includes(player.character) ||
+        !meleeAltCostumes[player.character as MeleeCharacter].colors.includes(
+          player.color,
+        )
+      ) {
+        return undefined;
+      }
+    }
+  }
+
   return { isTeams: isTeams ?? false, players: playerData };
 }
 

@@ -115,6 +115,7 @@ export class SlippiConsoleRelay implements SlippiRelay {
           gameEnded: false,
         });
         const newGameData = getStartGameData(settingsData);
+        if (newGameData === undefined) return;
         const sameGame = isSameGame(newGameData, this.previousPlayers);
 
         const data: SlippiGameStartData = {
