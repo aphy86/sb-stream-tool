@@ -102,6 +102,14 @@ function WebsocketInputs() {
           ></Input>
         </div>
         <Button>Connect</Button>
+        <Button
+          type="button"
+          onClick={() => {
+            send("obs/disconnect");
+          }}
+        >
+          Disconnect
+        </Button>
       </div>
     </form>
   );

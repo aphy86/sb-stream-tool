@@ -4,6 +4,8 @@ export const ALL_ACTIONS = [
   "home",
   "score-up",
   "score-down",
+  "obs-quick-reconnect",
+  "obs-disconnect",
 ] as const;
 
 export type Action = (typeof ALL_ACTIONS)[number];

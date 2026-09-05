@@ -3,6 +3,7 @@ import { StoreSliceType } from "./slice";
 import { StateCreator } from "zustand";
 import { Action, ShortcutSettings } from "@app/common";
 import { send } from "@app/preload";
+import { useSettingsStore } from "../store";
 
 type Shortcuts = Map<Action, Hotkey>;
 
@@ -19,6 +20,28 @@ export const defaultShortcuts = new Map<Action, Hotkey>([
   ["submit", "Enter"],
   ["score-up", "ArrowUp"],
   ["score-down", "ArrowDown"],
+  ["obs-quick-reconnect", "Alt+1"],
+  ["obs-disconnect", "Alt+2"],
+]);
+
+export const globalShortcuts = new Map<Action, () => void>([
+  [
+    "obs-quick-reconnect",
+    () => {
+      const ip = useSettingsStore.getState().websocketIp;
+      const password = useSettingsStore.getState().websocketPassword;
+      const port = useSettingsStore.getState().websocketPort;
+      if (ip !== "" && password !== "" && port !== "") {
+        send(
+          "obs/connect",
+          useSettingsStore.getState().websocketIp,
+          useSettingsStore.getState().websocketPort,
+          useSettingsStore.getState().websocketPassword,
+        );
+      }
+    },
+  ],
+  ["obs-disconnect", () => send("obs/disconnect")],
 ]);
 
 export const createShortcutsSlice: StateCreator<

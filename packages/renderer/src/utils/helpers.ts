@@ -9,7 +9,10 @@ import {
 import type { SetEntry, SetFormat } from "@renderer/types/tournament";
 import { UseFormGetValues, type UseFieldArrayReturn } from "react-hook-form";
 import { updateOverlay } from "@app/preload";
-import { EventSetsQuery, LiveEventSetsQuery } from "@renderer/types/__generated__/graphql-types";
+import {
+  EventSetsQuery,
+  LiveEventSetsQuery,
+} from "@renderer/types/__generated__/graphql-types";
 
 export const getValueWithinRange = (
   value: number,
@@ -34,6 +37,8 @@ export const ActionToName: Record<Action, string> = {
   submit: "Submit to overlay",
   "score-up": "Increase team score by 1",
   "score-down": "Decrease team score by 1",
+  "obs-quick-reconnect": "Quick Reconnect to OBS Websocket",
+  "obs-disconnect": "Disconnect from OBS Websocket",
 };
 
 export const onSubmit = (data: Tournament) => {

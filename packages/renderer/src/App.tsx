@@ -12,6 +12,7 @@ import { TournamentDefaultValues } from "./utils/form";
 import Obs from "./components/settings/obs/Obs";
 import Slippi from "./components/slippi/Slippi";
 import Shortcuts from "./components/settings/shortcuts/Shortcuts";
+import GlobalHotkeys from "./components/GlobalHotkeys";
 
 function App() {
   const methods = useForm<Tournament>({
@@ -21,28 +22,30 @@ function App() {
     <ThemeProvider defaultTheme="dark">
       <FormProvider {...methods}>
         <PlayerFormFieldArrayProvider>
-          <Router hook={useHashLocation}>
-            <Layout>
-              <Switch>
-                <Route path="/" component={Match}></Route>
-                <Route path="/settings" nest>
-                  <Settings>
-                    <Switch>
-                      <Route path="/" component={Obs}></Route>
-                      <Route path="/obs" component={Obs}></Route>
-                      {PLATFORMS.map((platform) => (
-                        <Route key={platform.id} path={`/${platform.id}`}>
-                          <PlatformSettings platform={platform} />
-                        </Route>
-                      ))}
-                      <Route path="/slippi" component={Slippi}></Route>
-                      <Route path="/shortcuts" component={Shortcuts}></Route>
-                    </Switch>
-                  </Settings>
-                </Route>
-              </Switch>
-            </Layout>
-          </Router>
+          <GlobalHotkeys>
+            <Router hook={useHashLocation}>
+              <Layout>
+                <Switch>
+                  <Route path="/" component={Match}></Route>
+                  <Route path="/settings" nest>
+                    <Settings>
+                      <Switch>
+                        <Route path="/" component={Obs}></Route>
+                        <Route path="/obs" component={Obs}></Route>
+                        {PLATFORMS.map((platform) => (
+                          <Route key={platform.id} path={`/${platform.id}`}>
+                            <PlatformSettings platform={platform} />
+                          </Route>
+                        ))}
+                        <Route path="/slippi" component={Slippi}></Route>
+                        <Route path="/shortcuts" component={Shortcuts}></Route>
+                      </Switch>
+                    </Settings>
+                  </Route>
+                </Switch>
+              </Layout>
+            </Router>
+          </GlobalHotkeys>
         </PlayerFormFieldArrayProvider>
       </FormProvider>
     </ThemeProvider>

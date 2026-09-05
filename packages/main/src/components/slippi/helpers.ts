@@ -242,6 +242,7 @@ export function getStartGameData(
               playerId: player.playerIndex,
               port: player.port,
               teamId: player.teamId,
+              teamShade: player.teamShade,
             },
           ]);
         } else {
@@ -262,6 +263,7 @@ export function getStartGameData(
               playerId: player.playerIndex,
               port: player.port,
               teamId: player.teamId,
+              teamShade: player.teamShade,
             });
           }
         }

@@ -17,6 +17,7 @@ export type Team = {
   score: number;
   inLosers: boolean;
   players: Player[];
+  color?: string;
 };
 
 export type Commentator = {

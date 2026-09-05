@@ -34,7 +34,7 @@ class SceneCollection {
             .catch((err) => {
               console.log(`Error: ${err}`);
             });
-        }, scene.start * 1000),
+        }, scene.start),
       );
     }
   }
@@ -92,9 +92,15 @@ export class ObsController {
         console.log("Connected");
       })
       .catch((reason) => {
-        EventStream.notify("obs", "error")
-        EventStream.notify("toast", "Obs Connection Error", reason)
-        console.log(`Error: ${reason}`)});
+        EventStream.notify("obs", "error");
+        EventStream.notify("toast", "Obs Connection Error", reason.message);
+        console.log(`Error: ${reason}`);
+      });
+  }
+
+  static async disconnect() {
+    await this.socket.disconnect();
+    EventStream.notify("toast", "OBS Websocket connection", `Disconnected`);
   }
 
   static async playScenes(sceneCollection: ObsSceneType) {

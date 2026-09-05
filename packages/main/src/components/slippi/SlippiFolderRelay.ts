@@ -95,6 +95,8 @@ export class SlippiFolderRelay implements SlippiRelay {
       if (!gameState?.settings && settings) {
         // a new game has ACTUALLY started, since the settings portion didn't exist before and there are new settings
         const newGameData = getStartGameData(settings);
+
+        if (newGameData === undefined) return;
         // now check if it's a runback with the same characters, and the set isn't over
         const sameGame = isSameGame(newGameData, this.previousPlayers);
 

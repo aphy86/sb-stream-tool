@@ -27,6 +27,8 @@ export function createHandlers(
       ObsController.connect("ws://", ip, port, password);
     },
 
+    "obs/disconnect": () => ObsController.disconnect(),
+
     "obs/update-scenes": (
       gameStartScenes: ObsScene[],
       gameEndScenes: ObsScene[],
@@ -95,7 +97,9 @@ export function createHandlers(
       SlippiRelayHandler.stopRelay(true);
     },
 
-    "slippi-relay/save-settings": (newSettings: Partial<SlippiRelaySettings>) => {
+    "slippi-relay/save-settings": (
+      newSettings: Partial<SlippiRelaySettings>,
+    ) => {
       SettingsStore.writeSlippiRelaySettings(newSettings);
     },
 

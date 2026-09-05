@@ -91,7 +91,7 @@ function Scenes() {
         </div>
         <div className="flex gap-4 w-full items-center">
           <div className="w-full">
-            <Label className="pb-1">Switch to scene in seconds</Label>
+            <Label className="pb-1">Switch to scene in milliseconds</Label>
             <Spinbox
               value={newSceneInput.start}
               onChangeNumber={(n) =>
@@ -100,7 +100,7 @@ function Scenes() {
                   start: n,
                 })
               }
-              placeholder="Switch in seconds"
+              placeholder="Switch in milliseconds"
             />
           </div>
           <div className="w-full">
@@ -148,7 +148,7 @@ function Scenes() {
               key={`game-start-scene-${scene.scene}-${scene.start}`}
             >
               <h5>
-                In {scene.start} seconds, switch to scene {scene.scene}
+                In {scene.start} milliseconds, switch to scene {scene.scene}
               </h5>
               <Button
                 className="ml-4"
@@ -178,7 +178,7 @@ function Scenes() {
               key={`game-end-scene-${scene.scene}-${scene.start}`}
             >
               <h5>
-                In {scene.start} seconds, switch to scene {scene.scene}
+                In {scene.start} milliseconds, switch to scene {scene.scene}
               </h5>
               <Button
                 className="ml-4"
@@ -208,7 +208,7 @@ function Scenes() {
               key={`set-end-scene-${scene.scene}-${scene.start}`}
             >
               <h5>
-                In {scene.start} seconds, switch to scene {scene.scene}
+                In {scene.start} milliseconds, switch to scene {scene.scene}
               </h5>
               <Button
                 className="ml-4"

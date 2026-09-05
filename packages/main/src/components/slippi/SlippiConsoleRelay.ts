@@ -110,12 +110,12 @@ export class SlippiConsoleRelay implements SlippiRelay {
       let game = this.games.get(this.gameNumber);
       if (game === undefined || game === null || !game.settings) {
         // a new game has occurred, since no game with that specific game number exists (number increases every game)
+        const newGameData = getStartGameData(settingsData);
+        if (newGameData === undefined) return;
         this.games.set(this.gameNumber, {
           settings: settingsData,
           gameEnded: false,
         });
-        const newGameData = getStartGameData(settingsData);
-        if (newGameData === undefined) return;
         const sameGame = isSameGame(newGameData, this.previousPlayers);
 
         const data: SlippiGameStartData = {
