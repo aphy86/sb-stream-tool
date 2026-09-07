@@ -44,6 +44,10 @@ export const ActionToName: Record<Action, string> = {
   "obs-quick-reconnect": "Quick Reconnect to OBS Websocket",
   "obs-disconnect": "Disconnect from OBS Websocket",
   "reset-score-global": "Reset both teams' scores",
+  "team-left-score-up": "Increase left team's score by 1",
+  "team-right-score-up": "Increase right team's score by 1",
+  "team-left-score-down": "Decrease left team's score by 1",
+  "team-right-score-down": "Decrease left team's score by 1",
 };
 
 export const onSubmit = (data: Tournament) => {

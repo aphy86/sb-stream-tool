@@ -23,6 +23,10 @@ export const defaultShortcuts = new Map<Action, Hotkey>([
   ["obs-quick-reconnect", "Alt+1"],
   ["obs-disconnect", "Alt+2"],
   ["reset-score-global", "Control+R"],
+  ["team-left-score-up", "Alt+ArrowUp"],
+  ["team-left-score-down", "Alt+ArrowDown"],
+  ["team-right-score-up", "Control+ArrowUp"],
+  ["team-right-score-down", "Control+ArrowDown"],
 ]);
 
 export const globalShortcuts = new Map<Action, () => void>([

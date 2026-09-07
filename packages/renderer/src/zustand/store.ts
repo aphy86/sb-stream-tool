@@ -9,10 +9,12 @@ import { createSlippiRelaySlice } from "./slices/slippiRelaySlice";
 import { createObsWebsocketSlice } from "./slices/obsWebsocketSlice";
 import { send } from "@app/preload";
 import { createEventSlice } from "./slices/eventSlice";
-import { createShortcutsSlice } from "./slices/shortcutsSlice";
+import {
+  createShortcutsSlice,
+  defaultShortcuts,
+} from "./slices/shortcutsSlice";
 import { enableMapSet } from "immer";
 import {
-  Action,
   ObsScene,
   ObsSceneSettings,
   ObsWebsocketSettings,
@@ -55,7 +57,7 @@ Promise.all([
   send("shortcuts/get-shortcuts")
     .then((shortcutsList: ShortcutSettings | undefined) => {
       if (shortcutsList === undefined) return;
-      const retrievedShortcuts = new Map<Action, Hotkey>();
+      const retrievedShortcuts = new Map(defaultShortcuts);
       shortcutsList.forEach((shortcut) =>
         retrievedShortcuts.set(shortcut.action, shortcut.hotkey as Hotkey),
       );
@@ -108,8 +110,6 @@ Promise.all([
     .catch((error) => console.log(error)),
   send("slippi-relay/get-settings")
     .then((settings: SlippiRelaySettings | undefined) => {
-      console.log("yess")
-      console.log(settings)
       if (settings === undefined) return;
       useSettingsStore.setState({
         slippiRelayStatus: settings.relayStatus,

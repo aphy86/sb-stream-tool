@@ -9,9 +9,10 @@ import { Badge } from "lucide-react";
 import Player from "./Player";
 import { Tournament } from "@app/common";
 import { useRef } from "react";
-import { useHotkey } from "@tanstack/react-hotkeys";
+import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { getValueWithinRange } from "@renderer/utils/helpers";
+import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
 
 function Team({ teamNum }: { teamNum: number }) {
   const max = 100;
@@ -21,11 +22,53 @@ function Team({ teamNum }: { teamNum: number }) {
 
   const teamPanelRef = useRef<HTMLDivElement>(null);
 
-  const scoreIncreaseHotkey = useSettingsStore(
-    (state) => state.shortcuts.get("score-up") ?? "ArrowUp",
+  const scoreIncreaseHotkey =
+    useSettingsStore((state) => state.shortcuts.get("score-up")) ??
+    (defaultShortcuts.get("score-up") as Hotkey);
+
+  const scoreDecreaseHotkey =
+    useSettingsStore((state) => state.shortcuts.get("score-down")) ??
+    (defaultShortcuts.get("score-down") as Hotkey);
+
+  const getKeys = () => {
+    if (teamNum === 0) {
+      return {
+        teamIncreaseKey:
+          useSettingsStore((state) =>
+            state.shortcuts.get("team-left-score-up"),
+          ) ?? (defaultShortcuts.get("team-left-score-up") as Hotkey),
+        teamDecreaseKey:
+          useSettingsStore((state) =>
+            state.shortcuts.get("team-left-score-down"),
+          ) ?? (defaultShortcuts.get("team-left-score-down") as Hotkey),
+      };
+    }
+    return {
+      teamIncreaseKey:
+        useSettingsStore((state) =>
+          state.shortcuts.get("team-right-score-up"),
+        ) ?? (defaultShortcuts.get("team-right-score-up") as Hotkey),
+      teamDecreaseKey:
+        useSettingsStore((state) =>
+          state.shortcuts.get("team-right-score-down"),
+        ) ?? (defaultShortcuts.get("team-right-score-down") as Hotkey),
+    };
+  };
+
+  const { teamIncreaseKey, teamDecreaseKey } = getKeys();
+
+  useHotkey(teamDecreaseKey, () =>
+    setValue(
+      `teams.${teamNum}.score`,
+      getValueWithinRange(getValues(`teams.${teamNum}.score`) - 1, max, min),
+    ),
   );
-  const scoreDecreaseHotkey = useSettingsStore(
-    (state) => state.shortcuts.get("score-down") ?? "ArrowDown",
+
+  useHotkey(teamIncreaseKey, () =>
+    setValue(
+      `teams.${teamNum}.score`,
+      getValueWithinRange(getValues(`teams.${teamNum}.score`) + 1, max, min),
+    ),
   );
 
   useHotkey(

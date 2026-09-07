@@ -17,6 +17,7 @@ function Teams() {
       <div className="flex gap-4 justify-center">
         <Button
           type="button"
+          className="w-1/5"
           onClick={() => {
             swap(0, 1);
             swapCharacters(0, 1); // since it's not synced with react-hook-form, it needs to be called
@@ -26,6 +27,7 @@ function Teams() {
         </Button>
         <Button
           type="button"
+          className="w-1/5"
           onClick={() => {
             swapGameInfo(0, 1);
             swapCharacters(0, 1); // since it's not synced with react-hook-form, it needs to be called
@@ -35,6 +37,7 @@ function Teams() {
         </Button>
         <Button
           type="button"
+          className="w-1/5"
           onClick={() => {
             resetAllScores(getValues, setValue);
           }}

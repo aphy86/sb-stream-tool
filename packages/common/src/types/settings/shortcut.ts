@@ -7,6 +7,10 @@ export const ALL_ACTIONS = [
   "reset-score-global",
   "obs-quick-reconnect",
   "obs-disconnect",
+  "team-left-score-up",
+  "team-right-score-up",
+  "team-left-score-down",
+  "team-right-score-down",
 ] as const;
 
 export type Action = (typeof ALL_ACTIONS)[number];

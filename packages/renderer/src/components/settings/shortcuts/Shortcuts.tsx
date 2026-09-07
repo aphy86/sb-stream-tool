@@ -3,7 +3,11 @@ import { ActionToName } from "@renderer/utils/helpers";
 import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
 import { Action } from "@app/common";
 import { useSettingsStore } from "@renderer/zustand/store";
-import { formatForDisplay, useHotkeyRecorder } from "@tanstack/react-hotkeys";
+import {
+  formatForDisplay,
+  Hotkey,
+  useHotkeyRecorder,
+} from "@tanstack/react-hotkeys";
 import { useState } from "react";
 import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
 
@@ -15,6 +19,21 @@ function Shortcuts() {
   const areShortcutsSaved = Array.from(shortcuts).every(
     ([action, hotkey]) => savedShortcuts.get(action) === hotkey,
   );
+  const hasDuplicateKeys = () => {
+    const keySet = new Set<Hotkey>();
+    for (const [_, hotkey] of shortcuts) {
+      if (keySet.has(hotkey))
+        return {
+          exists: true,
+          duplicateKey: hotkey,
+        };
+      keySet.add(hotkey);
+    }
+    return {
+      exists: false,
+      duplicateKey: null,
+    };
+  };
   const recorder = useHotkeyRecorder({
     onRecord: (hotkey) => {
       if (editingAction) {
@@ -28,6 +47,8 @@ function Shortcuts() {
       setEditingAction(null);
     },
   });
+
+  const existsDuplicateKeys = hasDuplicateKeys();
   return (
     <form
       className="flex flex-col gap-4 w-full p-2"
@@ -37,6 +58,12 @@ function Shortcuts() {
       }}
     >
       <h1 className="text-center">Keyboard shortcuts settings</h1>
+      {existsDuplicateKeys.exists && (
+        <h2 className="text-center">
+          Multiple actions are set to the same keybind:{" "}
+          {existsDuplicateKeys.duplicateKey}
+        </h2>
+      )}
       {!areShortcutsSaved && (
         <h2 className="text-center">Shortcut changes are not saved.</h2>
       )}
@@ -65,7 +92,9 @@ function Shortcuts() {
           </div>
         ))}
       </div>
-      <Button type="submit">Save keybind settings</Button>
+      <Button disabled={existsDuplicateKeys.exists} type="submit">
+        Save keybind settings
+      </Button>
       <Button
         type="button"
         onClick={() => {
