@@ -4,6 +4,7 @@ export const ALL_ACTIONS = [
   "home",
   "score-up",
   "score-down",
+  "reset-score-global",
   "obs-quick-reconnect",
   "obs-disconnect",
 ] as const;

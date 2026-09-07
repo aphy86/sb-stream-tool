@@ -12,9 +12,11 @@ import { Button } from "./ui/button";
 import SetQuery from "./SetQuery";
 import EventSets from "./EventSets";
 import LiveEventSets from "./LiveEventSets";
-import { useHotkey } from "@tanstack/react-hotkeys";
-import { onSubmit } from "@renderer/utils/helpers";
+import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { onSubmit, resetAllScores } from "@renderer/utils/helpers";
 import { getPlatformByEventUrl } from "@renderer/platform/registry";
+import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
+import { useRef } from "react";
 // import { sendToastMessage } from "./ui/toast";
 
 function Match() {
@@ -24,17 +26,27 @@ function Match() {
   const apiKey = useSettingsStore(
     (state) => state.credentials[platform.id] ?? "",
   );
-  const { handleSubmit } = useFormContext<Tournament>();
+  const matchRef = useRef<HTMLDivElement>(null);
+  const { handleSubmit, getValues, setValue } = useFormContext<Tournament>();
   const submitHotkey = useSettingsStore(
-    (state) => state.shortcuts.get("submit") ?? "Enter",
+    (state) =>
+      state.shortcuts.get("submit") ??
+      (defaultShortcuts.get("submit") as Hotkey),
+  );
+  const resetScoreHotkey = useSettingsStore(
+    (state) =>
+      state.shortcuts.get("reset-score-global") ??
+      (defaultShortcuts.get("reset-score-global") as Hotkey),
   );
 
   useHotkey(submitHotkey, () => {
     handleSubmit(onSubmit)().catch((error) => console.log(error));
   });
 
+  useHotkey(resetScoreHotkey, () => resetAllScores(getValues, setValue));
+
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={matchRef} className="flex flex-col gap-2">
       {apiKey === "" && eventUrl !== "" && (
         <Alert>
           <AlertCircleIcon />

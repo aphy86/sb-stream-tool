@@ -7,7 +7,11 @@ import {
 } from "@app/common";
 
 import type { SetEntry, SetFormat } from "@renderer/types/tournament";
-import { UseFormGetValues, type UseFieldArrayReturn } from "react-hook-form";
+import {
+  UseFormGetValues,
+  UseFormSetValue,
+  type UseFieldArrayReturn,
+} from "react-hook-form";
 import { updateOverlay } from "@app/preload";
 import {
   EventSetsQuery,
@@ -39,6 +43,7 @@ export const ActionToName: Record<Action, string> = {
   "score-down": "Decrease team score by 1",
   "obs-quick-reconnect": "Quick Reconnect to OBS Websocket",
   "obs-disconnect": "Disconnect from OBS Websocket",
+  "reset-score-global": "Reset both teams' scores",
 };
 
 export const onSubmit = (data: Tournament) => {
@@ -317,4 +322,13 @@ export function findSlippiWinner(
     }
   }
   return undefined;
+}
+
+export function resetAllScores(
+  getValues: UseFormGetValues<Tournament>,
+  setValue: UseFormSetValue<Tournament>,
+) {
+  for (let i = 0; i < getValues("teams").length; i++) {
+    setValue(`teams.${i}.score`, 0);
+  }
 }
