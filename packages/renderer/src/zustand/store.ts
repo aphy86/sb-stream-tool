@@ -20,10 +20,8 @@ import {
   ObsWebsocketSettings,
   ShortcutSettings,
   SlippiRelaySettings,
-  // SlippiRelaySettings,
 } from "@app/common";
 import { Hotkey } from "@tanstack/react-hotkeys";
-import { createZustandStateSlice } from "./slices/zustandStateSlice";
 import { PLATFORMS, resolveEventUrl } from "@renderer/platform/registry";
 
 enableMapSet();
@@ -37,7 +35,6 @@ export const useSettingsStore = create<StoreSliceType>()(
       ...createObsWebsocketSlice(...a),
       ...createEventSlice(...a),
       ...createShortcutsSlice(...a),
-      ...createZustandStateSlice(...a),
     })),
   ),
 );
@@ -132,8 +129,7 @@ Promise.all([
     })
     .catch((error) => console.log(error)),
 ])
-  .then(() => useSettingsStore.setState({ isIpcHydrated: true }))
+  .then(() => console.log("All state restored"))
   .catch((error) => {
-    useSettingsStore.setState({ isIpcHydrated: false });
-    console.log(error);
+    throw new Error(error);
   });

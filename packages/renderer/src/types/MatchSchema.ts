@@ -1,17 +1,51 @@
-// import * as z from "zod";
+import * as z from "zod";
 
-// const PlayerInfoSchema = z.strictObject({
-//   teamName: z.string().optional(),
-//   playerTag: z.string().optional(),
-//   pronouns: z.string().optional(),
-//   twitter: z.string().optional(),
-// });
+const SocialMediaAccountSchema = z.strictObject({
+  platform: z.string(),
+  username: z.string(),
+});
 
-// const PortColorSchema = z.xor([
-//   z.literal("Red"),
-//   z.literal("Blue"),
-//   z.literal("Green"),
-//   z.literal("Yellow"),
-// ]);
+const PlayerInfoSchema = z.strictObject({
+  teamName: z.string(),
+  playerTag: z.string(),
+  pronouns: z.string(),
+  socials: z.array(SocialMediaAccountSchema),
+});
 
-// const GameInfoSchema = z.strictObject([])
+const GameInfoSchema = z.strictObject({
+  character: z.string(),
+  altCostume: z.string(),
+  port: z.number(),
+});
+
+const CommentatorSchema = z.strictObject({
+  name: z.string(),
+  twitter: z.string(),
+  pronouns: z.string(),
+});
+
+const PlayerSchema = z.strictObject({
+  playerInfo: PlayerInfoSchema,
+  gameInfo: GameInfoSchema,
+});
+
+const TeamSchema = z.strictObject({
+  name: z.string(),
+  score: z.number(),
+  inLosers: z.boolean(),
+  players: z.array(PlayerSchema),
+  color: z.string().optional(),
+});
+
+const TournamentSchema = z.strictObject({
+  name: z.string(),
+  bestOf: z.number(),
+  roundFormat: z.string(),
+  customRoundFormat: z.string().optional(),
+  roundNumber: z.number().optional(),
+  setFormat: z.string(),
+  teams: TeamSchema,
+  commentators: CommentatorSchema,
+});
+
+export { TournamentSchema };

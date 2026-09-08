@@ -1,8 +1,13 @@
+export type SocialMediaAccount = {
+  platform: string;
+  username: string;
+};
+
 export type PlayerInfo = {
   teamName: string;
   playerTag: string;
   pronouns: string;
-  twitter: string;
+  socials: SocialMediaAccount[];
 };
 
 export type Player = {

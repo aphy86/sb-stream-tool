@@ -27,7 +27,7 @@ export const createSlippiRelaySlice: StateCreator<
   [["zustand/immer", never]],
   [],
   SlippiRelaySlice
-> = (set, get) => ({
+> = (set) => ({
   slippiRelayStatus: "disabled",
   slippiRelayDirectory: "",
   slippiWiiRelayIp: "",
@@ -64,7 +64,6 @@ export const createSlippiRelaySlice: StateCreator<
   },
   writeSlippiRelaySettingsToFile: (settings: Partial<SlippiRelaySettings>) => {
     send("slippi-relay/save-settings", {
-      relayStatus: get().slippiRelayStatus,
       ...settings,
     } as Partial<SlippiRelaySettings>);
   },
