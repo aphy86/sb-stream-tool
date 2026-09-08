@@ -1,10 +1,4 @@
-import {
-  Action,
-  placements,
-  PortColor,
-  Tournament,
-  type SlippiPlayer,
-} from "@app/common";
+import { Action, placements, Tournament, type SlippiPlayer } from "@app/common";
 
 import type { SetEntry, SetFormat } from "@renderer/types/tournament";
 import {
@@ -58,13 +52,6 @@ export const ActionToName: Record<Action, string> = {
 export const onSubmit = (data: Tournament) => {
   console.log(data);
   updateOverlay(data).catch((error) => console.log(error));
-};
-
-export const colorToPort: Record<PortColor, number> = {
-  Red: 1,
-  Blue: 2,
-  Green: 3,
-  Yellow: 4,
 };
 
 // export const getBorderColor = (setFormat: SetFormat)
