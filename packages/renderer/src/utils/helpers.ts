@@ -204,7 +204,6 @@ export function filterSets(
   return filteredSets;
 }
 
-const colors = ["Red", "Blue", "Green", "Yellow"];
 // // updates the player form for doubles or singles
 // export function updatePlayerForm(
 //   setFormat: SetFormat,
@@ -259,7 +258,7 @@ export function changeSetFormat(
             gameInfo: {
               character: "Random",
               altCostume: "Default",
-              port: colors[2 + i],
+              port: 2 + i,
             },
           });
         }
