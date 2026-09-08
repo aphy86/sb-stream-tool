@@ -1,5 +1,5 @@
 import { usePlayerFormFieldArrayContext } from "@renderer/hooks/use-player-form-field-array-context";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Field, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { Spinbox } from "./ui/spinbox";
@@ -13,13 +13,23 @@ import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { getValueWithinRange } from "@renderer/utils/helpers";
 import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { useGameProfile } from "@renderer/hooks/use-game-profile";
 
 function Team({ teamNum }: { teamNum: number }) {
   const max = 100;
   const min = 0;
   const players = usePlayerFormFieldArrayContext();
   const { setValue, getValues } = useFormContext<Tournament>();
+  const watchSetFormat = useWatch({ name: "setFormat" });
 
+  const gameProfile = useGameProfile();
   const teamPanelRef = useRef<HTMLDivElement>(null);
 
   const scoreIncreaseHotkey =
@@ -93,29 +103,66 @@ function Team({ teamNum }: { teamNum: number }) {
 
   return (
     <div tabIndex={-1} ref={teamPanelRef} className="p-1 w-full">
-      <Controller
-        name={`teams.${teamNum}.name`}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="w-full py-2">
-            <Input
-              className="text-center"
-              {...field}
-              aria-invalid={fieldState.invalid}
-              id={`${teamNum}-name`}
+      <div className="flex flex-col gap-0.5">
+        <Controller
+          name={`teams.${teamNum}.name`}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid} className="w-full py-2">
+              <Input
+                className="text-center"
+                {...field}
+                aria-invalid={fieldState.invalid}
+                id={`${teamNum}-name`}
+              />
+            </Field>
+          )}
+        />
+        {watchSetFormat.includes("Doubles") && (
+          <div>
+            <Controller
+              name={`teams.${teamNum}.color`}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={`teams-${teamNum}-color`}>
+                    Team Color
+                  </FieldLabel>
+                  <Select
+                    value={field.value || ""}
+                    onValueChange={field.onChange}
+                    name={field.name}
+                  >
+                    <SelectTrigger id={`teams-${teamNum}-color`}>
+                      <SelectValue placeholder="Select Team Color">
+                        {field.value}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gameProfile.teamColors.map((color) => (
+                        <SelectItem key={`teamColor-${color}`} value={color}>
+                          {color}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
             />
-          </Field>
+          </div>
         )}
-      />
-
-      <div className="flex items-end justify-evenly gap-2 pb-2">
+      </div>
+      <div className="flex items-end justify-evenly gap-2 p-2">
         <Controller
           name={`teams.${teamNum}.score`}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="w-fit">
-              <FieldLabel className="text-center flex justify-center">
+              <FieldLabel
+                htmlFor="score"
+                className="text-center flex justify-center"
+              >
                 Score
               </FieldLabel>
               <Spinbox
+                id="score"
                 numberValue={field.value as number}
                 onChangeNumber={field.onChange}
                 min={0}

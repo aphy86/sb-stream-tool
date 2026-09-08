@@ -12,7 +12,6 @@ import {
   changeSetFormat,
   findSlippiWinner,
   onSubmit,
-  portToColor,
 } from "@renderer/utils/helpers";
 import { useSettingsStore } from "@renderer/zustand/store";
 
@@ -21,6 +20,9 @@ export function useSlippiDataHandler() {
   const teams = usePlayerFormFieldArrayContext();
   const slippiRelayStatus = useSettingsStore(
     (state) => state.slippiRelayStatus,
+  );
+  const slippiRelayAutoUpdate = useSettingsStore(
+    (state) => state.slippiRelayAutoupdate,
   );
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function useSlippiDataHandler() {
             setValue(`teams.${i}.players.${j}.gameInfo`, {
               character: data.players[i][j].character,
               altCostume: data.players[i][j].color,
-              port: portToColor[data.players[i][j].port],
+              port: data.players[i][j].port,
             });
           }
         }
@@ -73,7 +75,7 @@ export function useSlippiDataHandler() {
 
       send("obs/play-game-start-scenes").catch((error) => console.log(error));
 
-      if (slippiRelayStatus !== "disabled") {
+      if (slippiRelayStatus !== "disabled" && slippiRelayAutoUpdate) {
         handleSubmit(onSubmit)().catch((error) => console.log(error));
       }
     });
@@ -97,7 +99,7 @@ export function useSlippiDataHandler() {
           send("obs/play-game-end-scenes").catch((error) => console.log(error));
         }
 
-        if (slippiRelayStatus !== "disabled") {
+        if (slippiRelayStatus !== "disabled" && slippiRelayAutoUpdate) {
           handleSubmit(onSubmit)().catch((error) => console.log(error));
         }
       }

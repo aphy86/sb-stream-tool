@@ -3,6 +3,7 @@ import { FileHandler } from "./components/FileHandler.js";
 import { ObsController } from "./components/ObsController.js";
 import { ClientToServerEvents, ServerToClientEvents } from "./types.js";
 import {
+  GameProfileId,
   ObsScene,
   ObsSceneSettings,
   ObsWebsocketSettings,
@@ -104,5 +105,10 @@ export function createHandlers(
     },
 
     "slippi-relay/get-settings": () => SettingsStore.getSlippiRelaySettings(),
+
+    "game-profile/get": () => SettingsStore.getGameProfile(),
+
+    "game-profile/save": (newProfile: GameProfileId) =>
+      SettingsStore.writeGameProfile(newProfile),
   };
 }

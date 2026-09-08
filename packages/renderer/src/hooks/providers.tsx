@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useFieldArray } from "react-hook-form";
-import { PlayerFormFieldArrayContext, ThemeProviderContext } from "./contexts";
+import {
+  GameProfileProviderContext,
+  PlayerFormFieldArrayContext,
+  ThemeProviderContext,
+} from "./contexts";
 import type { Theme, ThemeProviderProps } from "@renderer/types/theme";
+import { MeleeProfile } from "@renderer/game-profiles/melee";
+import { GameProfile } from "@renderer/types/GameProfile";
+import { onGameProfileChange, send } from "@app/preload";
+import { getProfileById } from "@renderer/game-profiles/registry";
 
 export function PlayerFormFieldArrayProvider({
   children,
@@ -59,5 +67,33 @@ export function ThemeProvider({
     <ThemeProviderContext {...props} value={value}>
       {children}
     </ThemeProviderContext>
+  );
+}
+
+export function GameProfileProvider({
+  children,
+  ...props
+}: {
+  children: React.ReactNode;
+}) {
+  const [profile, setProfile] = useState<GameProfile>(MeleeProfile);
+
+  useEffect(() => {
+    send("game-profile/get").then((savedProfile) =>
+      setProfile(getProfileById(savedProfile)),
+    );
+  }, []);
+
+  useEffect(() => {
+    onGameProfileChange((profileId) => {
+      const newProfile = getProfileById(profileId);
+      setProfile(newProfile);
+    });
+  }, []);
+
+  return (
+    <GameProfileProviderContext {...props} value={profile}>
+      {children}
+    </GameProfileProviderContext>
   );
 }

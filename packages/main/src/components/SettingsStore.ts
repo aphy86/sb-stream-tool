@@ -2,6 +2,7 @@ import {
   ALL_ACTIONS,
   ALL_OBS_SCENE_TYPES,
   ALL_SLIPPI_RELAY_STATUSES,
+  GameProfileId,
   ObsScene,
   ObsSceneSettings,
   ObsWebsocketSettings,
@@ -293,5 +294,27 @@ export class SettingsStore {
       websocket: websocketSettings,
       scenes: scenes,
     };
+  }
+
+  static async writeGameProfile(gameProfile: GameProfileId) {
+    const db = RocksDatabase.open(this.storePath);
+    const serializedGameProfileId = await this.serialize(gameProfile);
+
+    await db.put("game-profile", serializedGameProfileId);
+
+    db.close();
+  }
+
+  static async getGameProfile() {
+    // const isGameProfileId = (data: any)
+    const db = RocksDatabase.open(this.storePath);
+
+    const profile = await db.get("game-profile");
+
+    db.close();
+
+    if (profile && typeof profile === "string") return profile;
+
+    return "melee";
   }
 }

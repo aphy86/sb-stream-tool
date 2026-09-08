@@ -1,6 +1,7 @@
 import { Placement } from "./types/match/index.js";
 
 export * from "./melee.js";
+export * from "./pplus.js";
 export * from "./types/index.js";
 
 export const placements: Placement[] = [

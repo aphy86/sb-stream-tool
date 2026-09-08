@@ -1,3 +1,7 @@
+export type MeleePortColor = "Red" | "Blue" | "Green" | "Yellow";
+
+export type MeleeTeamColor = "Red" | "Blue" | "Green";
+
 export type PortColor = "Red" | "Blue" | "Green" | "Yellow";
 
 export type MeleeCharacter =

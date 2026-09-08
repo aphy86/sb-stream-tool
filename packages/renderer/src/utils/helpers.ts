@@ -18,6 +18,11 @@ import {
   LiveEventSetsQuery,
 } from "@renderer/types/__generated__/graphql-types";
 
+export const tailwindBorderColorLookup = {
+  red: "border-red-500",
+  blue: "border-blue-500",
+  green: "border-green-500",
+};
 export const getValueWithinRange = (
   value: number,
   max: number,
@@ -62,20 +67,7 @@ export const colorToPort: Record<PortColor, number> = {
   Yellow: 4,
 };
 
-export const portToColor: Record<number, PortColor> = {
-  1: "Red",
-  2: "Blue",
-  3: "Green",
-  4: "Yellow",
-};
-
-export const borderColorVariants: Record<PortColor, string> = {
-  Blue: "border-blue-500",
-  Red: "border-red-500",
-  Green: "border-green-500",
-  Yellow: "border-yellow-500",
-};
-
+// export const getBorderColor = (setFormat: SetFormat)
 export const sleep = (ms: number): Promise<unknown> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -317,7 +309,7 @@ export function findSlippiWinner(
     for (let i = 0; i < getValues("teams").length; i++) {
       for (let j = 0; j < getValues(`teams.${i}.players`).length; j++) {
         if (
-          colorToPort[getValues(`teams.${i}.players.${j}.gameInfo.port`)] ===
+          getValues(`teams.${i}.players.${j}.gameInfo.port`) ===
           winners[0] + 1 // always gonna have at least 1 winner, so why not compare it with the first winner player index since its always guaranteed to exist?
         ) {
           return i;

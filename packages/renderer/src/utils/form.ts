@@ -12,6 +12,7 @@ export const TournamentDefaultValues: Tournament = {
       name: "Team 1",
       score: 0,
       inLosers: false,
+      color: undefined,
       players: [
         {
           playerInfo: {
@@ -23,7 +24,7 @@ export const TournamentDefaultValues: Tournament = {
           gameInfo: {
             character: "Random",
             altCostume: "Default",
-            port: "Red",
+            port: 1,
           },
         },
       ],
@@ -32,6 +33,7 @@ export const TournamentDefaultValues: Tournament = {
       name: "Team 2",
       score: 0,
       inLosers: false,
+      color: undefined,
       players: [
         {
           playerInfo: {
@@ -43,7 +45,7 @@ export const TournamentDefaultValues: Tournament = {
           gameInfo: {
             character: "Random",
             altCostume: "Default",
-            port: "Blue",
+            port: 2,
           },
         },
       ],

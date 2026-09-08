@@ -23,16 +23,11 @@ import {
   meleeAltCostumes,
   MeleeCharacter,
   meleeCharacters,
-  PortColor,
   Tournament,
 } from "@app/common";
-import { useSettingsStore } from "@renderer/zustand/store";
-import {
-  borderColorVariants,
-  colorToPort,
-  portToColor,
-} from "@renderer/utils/helpers";
-import { ChevronsUpDown, Square } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
+import { useGameProfile } from "@renderer/hooks/use-game-profile";
+import { tailwindBorderColorLookup } from "@renderer/utils/helpers";
 
 function Player({
   teamNum,
@@ -42,12 +37,8 @@ function Player({
   playerNum: number;
 }) {
   const { setValue } = useFormContext<Tournament>();
-  const setPlayers = useSettingsStore((state) => state.setPlayers);
 
-  const stopRelay = () => {
-    // await autoStopSlippiRelay();
-    setPlayers([]);
-  };
+  const gameProfile = useGameProfile();
 
   const characterSelected = useWatch({
     name: `teams.${teamNum}.players.${playerNum}.gameInfo.character`,
@@ -55,15 +46,29 @@ function Player({
   const altCostumeSelected = useWatch({
     name: `teams.${teamNum}.players.${playerNum}.gameInfo.altCostume`,
   }) as string;
-  const port = useWatch({
-    name: `teams.${teamNum}.players.${playerNum}.gameInfo.port`,
-  }) as PortColor;
+  const teamColor = useWatch({
+    name: `teams.${teamNum}.color`,
+  });
+  const watchSetFormat = useWatch({
+    name: "setFormat",
+  });
   const [characterPopoverOpen, setCharacterPopoverOpen] = useState(false);
 
+  const getBorderColor = () => {
+    if (watchSetFormat.includes("Doubles")) {
+      if (teamColor) {
+        return (
+          tailwindBorderColorLookup[
+            teamColor.toLowerCase() as keyof typeof tailwindBorderColorLookup
+          ] ?? "border-white"
+        );
+      }
+    }
+    return "border-white";
+  };
+
   return (
-    <div
-      className={`rounded-md border-2 ${borderColorVariants[port]} py-2 px-2 w-full`}
-    >
+    <div className={`rounded-md border-2 ${getBorderColor()} py-2 px-2 w-full`}>
       <div className="w-full">
         <h6 className="text-center">Player {playerNum + 1}</h6>
         <div className="px-16 my-2">
@@ -80,7 +85,7 @@ function Player({
                 gameInfo: {
                   character: "Random",
                   altCostume: "Default",
-                  port: portToColor[playerNum + 1],
+                  port: playerNum + 1,
                 },
               })
             }
@@ -152,7 +157,7 @@ function Player({
                 </FieldLabel>
                 <Select
                   name={field.name}
-                  value={field.value as string}
+                  value={field.value}
                   onValueChange={field.onChange}
                 >
                   <SelectTrigger
@@ -161,22 +166,18 @@ function Player({
                     aria-invalid={fieldState.invalid}
                   >
                     <SelectValue aria-label={field.value as string}>
-                      {colorToPort[field.value as PortColor]}
+                      {field.value}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Red">
-                      <Square fill="red" /> 1
-                    </SelectItem>
-                    <SelectItem value="Blue">
-                      <Square fill="blue" /> 2
-                    </SelectItem>
-                    <SelectItem value="Green">
-                      <Square fill="green" /> 3
-                    </SelectItem>
-                    <SelectItem value="Yellow">
-                      <Square fill="yellow" /> 4
-                    </SelectItem>
+                    {gameProfile.portNumbers.map((portNum) => (
+                      <SelectItem
+                        key={portNum.toString()}
+                        value={portNum.toString()}
+                      >
+                        {portNum}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
@@ -239,7 +240,6 @@ function Player({
                                 `teams.${teamNum}.players.${playerNum}.gameInfo.altCostume`,
                                 "Default",
                               );
-                              stopRelay();
                               setCharacterPopoverOpen(false);
                             }}
                           >
@@ -270,7 +270,6 @@ function Player({
                       // console.log(altCostumeSelected)
                       return;
                     }
-                    stopRelay();
                     field.onChange(e);
                   }}
                   value={field.value as string}

@@ -1,5 +1,3 @@
-import { PortColor } from "./game/melee.js";
-
 export type PlayerInfo = {
   teamName: string;
   playerTag: string;
@@ -29,7 +27,7 @@ export type Commentator = {
 export type GameInfo = {
   character: string;
   altCostume: string;
-  port: PortColor;
+  port: number;
 };
 
 export type Tournament = {

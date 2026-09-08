@@ -6,6 +6,7 @@ import {
   Tournament,
   ObsConnectionStatus,
   SlippiConnectionStatus,
+  GameProfileId,
 } from "@app/common";
 import { ipcRenderer } from "electron";
 
@@ -60,6 +61,10 @@ function onSlippiRelayConnectionStatusChange(
     callback(status),
   );
 }
+
+function onGameProfileChange(callback: (profileId: GameProfileId) => void) {
+  ipcRenderer.on("profile/change", (_event, profileId) => callback(profileId));
+}
 // function autoStopSlippiRelay() {
 //   return ipcRenderer.invoke("slippi:autoStopReadingFolder");
 // }
@@ -74,4 +79,5 @@ export {
   clearAllListeners,
   onObsConnectionStatusChange,
   onSlippiRelayConnectionStatusChange,
+  onGameProfileChange,
 };
