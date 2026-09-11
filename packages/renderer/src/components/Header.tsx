@@ -10,16 +10,10 @@ import {
   SelectValue,
 } from "./ui/select";
 import { placements, setFormats } from "@app/common";
-import { useSelector } from "@tanstack/react-form";
 
 const Header = withForm({
   defaultValues: MatchDefaultValues,
   render: function HeaderSection({ form }) {
-    const roundFormat = useSelector(
-      form.store,
-      (state) => state.values.roundFormat,
-    );
-
     return (
       <FieldGroup className="flex flex-col gap-2">
         <form.Field name="tournamentName">
@@ -103,50 +97,69 @@ const Header = withForm({
                 );
               }}
             </form.Field>
-            {roundFormat.includes("Round") && (
-              <form.Field name="roundNumber">
-                {(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Round Number</FieldLabel>
-                      <Spinbox
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value}
-                        onValueChange={field.handleChange}
-                        min={0}
-                        max={100}
-                      />
-                    </Field>
-                  );
-                }}
-              </form.Field>
-            )}
-            {roundFormat === "Custom Match" && (
-              <form.Field name="customRoundFormat">
-                {(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>
-                        Custom Round Name
-                      </FieldLabel>
-                      <Input
-                        name={field.name}
-                        id={field.name}
-                        value={field.state.value}
-                        onChange={(e) =>
-                          field.handleChange(e.currentTarget.value)
-                        }
-                      />
-                    </Field>
-                  );
-                }}
-              </form.Field>
-            )}
+            <form.Subscribe
+              selector={(state) => state.values.roundFormat}
+              children={(roundFormat) => {
+                return (
+                  roundFormat.includes("Round") && (
+                    <form.Field name="roundNumber">
+                      {(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>
+                              Round Number
+                            </FieldLabel>
+                            <Spinbox
+                              id={field.name}
+                              name={field.name}
+                              value={field.state.value}
+                              onValueChange={field.handleChange}
+                              min={0}
+                              max={100}
+                            />
+                          </Field>
+                        );
+                      }}
+                    </form.Field>
+                  )
+                );
+              }}
+            ></form.Subscribe>
+            <form.Subscribe
+              selector={(state) => state.values.roundFormat}
+              children={(roundFormat) => {
+                return (
+                  roundFormat === "Custom Match" && (
+                    <form.Field name="customRoundFormat">
+                      {(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>
+                              Custom Round Name
+                            </FieldLabel>
+                            <Input
+                              name={field.name}
+                              id={field.name}
+                              value={field.state.value}
+                              onChange={(e) =>
+                                field.handleChange(e.currentTarget.value)
+                              }
+                            />
+                          </Field>
+                        );
+                      }}
+                    </form.Field>
+                  )
+                );
+              }}
+            ></form.Subscribe>
           </div>
           <form.Field
             name="setFormat"
