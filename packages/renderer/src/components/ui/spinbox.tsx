@@ -1,25 +1,28 @@
-import * as React from "react";
 import { Input } from "./input";
 import { Button } from "./button";
 import { Minus, Plus } from "lucide-react";
+import { forwardRef, useState } from "react";
 
 export interface SpinboxProps extends React.ComponentProps<"input"> {
-  numberValue?: number;
-  onChangeNumber?: (numberValue: number) => void;
-  defaultValue?: number | undefined;
-  max?: number | undefined;
-  min?: number | undefined;
-  showButtons?: boolean | undefined;
+  value?: number;
+  onValueChange?: (value: number) => void;
+  defaultValue?: number;
+  max?: number;
+  min?: number;
+  showButtons?: boolean;
+  inputClassName?: string;
+  leftButtonClassName?: string;
+  rightButtonClassName?: string;
 }
 
 // number spinbox only (may add non-number elements in the future)
-const Spinbox = React.forwardRef<HTMLInputElement, SpinboxProps>(
+const Spinbox = forwardRef<HTMLInputElement, SpinboxProps>(
   (
     {
-      // className,
-      numberValue,
-      onChangeNumber,
-      max,
+      value,
+      onValueChange,
+      defaultValue = 0,
+      max = 100,
       min = 0,
       showButtons = true,
       ...props
@@ -27,49 +30,39 @@ const Spinbox = React.forwardRef<HTMLInputElement, SpinboxProps>(
     ref,
   ) => {
     // the inner state of the spinbox, allows the component to be both controlled (via numberValue) and uncontrolled
-    // and also syncs the state whenever someone decides to go from uncontrolled to controlled and vice versa
-    const [spinboxValue, setSpinboxValue] = React.useState(
-      props.defaultValue ?? numberValue ?? 0,
-    );
+    const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
 
-    const getValueWithinRange = (num: number): number => {
+    const isControlled = value !== undefined;
+    const currentValue = isControlled ? value : uncontrolledValue;
+
+    const clamp = (num: number) => {
       const maxNum = max ?? Number.MAX_SAFE_INTEGER;
       const minNum = min ?? Number.MIN_SAFE_INTEGER;
+
       if (Number.isNaN(num)) {
         return NaN;
       }
-      if (num > maxNum) {
-        return maxNum;
-      }
       if (num < minNum) {
-        return minNum;
+        return min;
       }
+
+      if (num > maxNum) {
+        return max;
+      }
+
       return num;
     };
 
-    const onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-      const num = getValueWithinRange(e.currentTarget.valueAsNumber);
-      if (onChangeNumber) {
-        onChangeNumber(num);
-      }
-      setSpinboxValue(num);
-    };
+    const handleChange = (value: number) => {
+      let clampedValue = clamp(value);
 
-    const onButtonClick = (valueToChangeBy: number): void => {
-      let num = getValueWithinRange(
-        (numberValue ?? spinboxValue) + valueToChangeBy,
-      );
-      if (Number.isNaN(num)) {
-        if (valueToChangeBy < 0) {
-          num = max ?? Number.MAX_SAFE_INTEGER;
-        } else {
-          num = min ?? Number.MIN_SAFE_INTEGER;
-        }
+      if (!isControlled) {
+        setUncontrolledValue(clampedValue);
       }
-      if (onChangeNumber) {
-        onChangeNumber(num);
+
+      if (onValueChange) {
+        onValueChange(clampedValue);
       }
-      setSpinboxValue(num);
     };
 
     return (
@@ -79,7 +72,11 @@ const Spinbox = React.forwardRef<HTMLInputElement, SpinboxProps>(
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => onButtonClick(-1)}
+            onClick={() =>
+              handleChange(
+                (Number.isNaN(currentValue) ? min : currentValue) - 1,
+              )
+            }
           >
             <Minus />
           </Button>
@@ -95,8 +92,8 @@ const Spinbox = React.forwardRef<HTMLInputElement, SpinboxProps>(
           // )}
           {...props}
           type="number"
-          value={numberValue ?? spinboxValue} // ensures user never passes in value without an accompanying onChange
-          onChange={onChange}
+          value={Number.isNaN(currentValue) ? "" : currentValue}
+          onChange={(e) => handleChange(e.currentTarget.valueAsNumber)}
           max={max}
           min={min}
         />
@@ -105,7 +102,11 @@ const Spinbox = React.forwardRef<HTMLInputElement, SpinboxProps>(
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => onButtonClick(1)}
+            onClick={() =>
+              handleChange(
+                (Number.isNaN(currentValue) ? min : currentValue) + 1,
+              )
+            }
           >
             <Plus />
           </Button>

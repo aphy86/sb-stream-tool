@@ -1,3 +1,4 @@
+import { SetFormat } from "@renderer/types/tournament.js";
 import { Placement } from "./types/match/index.js";
 
 export * from "./melee.js";
@@ -20,3 +21,5 @@ export const placements: Placement[] = [
   "Grand Finals Reset",
   "Custom Match",
 ];
+
+export const setFormats: SetFormat[] = ["Singles", "Doubles"];

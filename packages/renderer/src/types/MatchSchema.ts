@@ -20,7 +20,7 @@ const GameInfoSchema = z.strictObject({
 
 const CommentatorSchema = z.strictObject({
   name: z.string(),
-  twitter: z.string(),
+  socials: z.array(SocialMediaAccountSchema),
   pronouns: z.string(),
 });
 
@@ -37,15 +37,15 @@ const TeamSchema = z.strictObject({
   color: z.string().optional(),
 });
 
-const TournamentSchema = z.strictObject({
-  name: z.string(),
+const MatchSchema = z.strictObject({
+  tournamentName: z.string(),
   bestOf: z.number(),
   roundFormat: z.string(),
-  customRoundFormat: z.string().optional(),
+  customRoundFormat: z.string(),
   roundNumber: z.number().optional(),
   setFormat: z.string(),
-  teams: TeamSchema,
-  commentators: CommentatorSchema,
+  teams: z.array(TeamSchema),
+  commentators: z.array(CommentatorSchema),
 });
 
-export { TournamentSchema };
+export { MatchSchema };

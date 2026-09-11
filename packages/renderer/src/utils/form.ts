@@ -1,11 +1,20 @@
-import type { Team, Tournament } from "@app/common";
+import type { Match, Team } from "@app/common";
+import { fieldContext, formContext } from "@renderer/hooks/contexts";
+import { createFormHook } from "@tanstack/react-form";
 
-export const TournamentDefaultValues: Tournament = {
-  name: "",
+export const { useAppForm, withForm } = createFormHook({
+  fieldContext,
+  formContext,
+  fieldComponents: {},
+  formComponents: {},
+});
+
+export const MatchDefaultValues: Match = {
+  tournamentName: "",
   bestOf: 1,
   roundFormat: "Friendlies",
   customRoundFormat: "",
-  roundNumber: undefined,
+  roundNumber: 0,
   setFormat: "Singles",
   teams: [
     {
@@ -19,7 +28,7 @@ export const TournamentDefaultValues: Tournament = {
             teamName: "",
             playerTag: "",
             pronouns: "",
-            twitter: "",
+            socials: [],
           },
           gameInfo: {
             character: "Random",
@@ -40,7 +49,7 @@ export const TournamentDefaultValues: Tournament = {
             teamName: "",
             playerTag: "",
             pronouns: "",
-            twitter: "",
+            socials: [],
           },
           gameInfo: {
             character: "Random",
@@ -51,7 +60,9 @@ export const TournamentDefaultValues: Tournament = {
       ],
     },
   ],
-  commentators: [{ name: "", pronouns: "", twitter: "" }],
+  commentators: [
+    { name: "", pronouns: "", socials: [{ platform: "", username: "" }] },
+  ],
 };
 
 export const getTeamState = (teams: Team[]) => {

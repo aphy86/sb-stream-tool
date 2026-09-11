@@ -83,7 +83,7 @@ function toPlayer(user: {
     playerTag: user.getGamerTag(),
     pronouns: user.getPronouns(),
     // parry has no Twitter field; LinkedAccount is only Discord and start.gg.
-    twitter: "",
+    socials: [],
   };
 }
 
@@ -115,7 +115,7 @@ function padEntrants(entrants: PlatformEntrant[]): PlatformEntrant[] {
         teamName: "",
         playerTag: "",
         pronouns: "",
-        twitter: "",
+        socials: [],
       })),
     });
   }
@@ -135,8 +135,9 @@ function toRoundName(
     return ROUND_ROBIN_ROUND_NAME;
   }
   return (
-    rounds.get(roundKey(match.getRound(), match.getWinnersSide()))?.getLabel() ??
-    ""
+    rounds
+      .get(roundKey(match.getRound(), match.getWinnersSide()))
+      ?.getLabel() ?? ""
   );
 }
 
@@ -239,7 +240,9 @@ class ParryggClient implements PlatformClient {
       streamService.getTournamentStreams(request, this.metadata),
     );
     return new Map(
-      response.getStreamsList().map((stream) => [stream.getId(), stream.getChannel()]),
+      response
+        .getStreamsList()
+        .map((stream) => [stream.getId(), stream.getChannel()]),
     );
   }
 

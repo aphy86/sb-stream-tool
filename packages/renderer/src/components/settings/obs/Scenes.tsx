@@ -94,7 +94,7 @@ function Scenes() {
             <Label className="pb-1">Switch to scene in milliseconds</Label>
             <Spinbox
               value={newSceneInput.start}
-              onChangeNumber={(n) =>
+              onValueChange={(n) =>
                 setNewSceneInput({
                   ...newSceneInput,
                   start: n,

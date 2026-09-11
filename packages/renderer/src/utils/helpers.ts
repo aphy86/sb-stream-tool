@@ -1,22 +1,18 @@
-import { Action, placements, Tournament, type SlippiPlayer } from "@app/common";
+import { Action, placements, type SlippiPlayer } from "@app/common";
 
 import type { SetEntry, SetFormat } from "@renderer/types/tournament";
-import {
-  UseFormGetValues,
-  UseFormSetValue,
-  type UseFieldArrayReturn,
-} from "react-hook-form";
-import { updateOverlay } from "@app/preload";
+// import { updateOverlay } from "@app/preload";
 import {
   EventSetsQuery,
   LiveEventSetsQuery,
 } from "@renderer/types/__generated__/graphql-types";
 
-export const tailwindBorderColorLookup = {
+export const tailwindTeamBorderColorLookup = {
   red: "border-red-500",
   blue: "border-blue-500",
   green: "border-green-500",
 };
+
 export const getValueWithinRange = (
   value: number,
   max: number,
@@ -49,10 +45,10 @@ export const ActionToName: Record<Action, string> = {
   "team-right-score-down": "Decrease left team's score by 1",
 };
 
-export const onSubmit = (data: Tournament) => {
-  console.log(data);
-  updateOverlay(data).catch((error) => console.log(error));
-};
+// export const onSubmit = (data: Tournament) => {
+//   console.log(data);
+//   updateOverlay(data).catch((error) => console.log(error));
+// };
 
 // export const getBorderColor = (setFormat: SetFormat)
 export const sleep = (ms: number): Promise<unknown> =>
@@ -91,9 +87,14 @@ export function filterLiveSets(
                 teamName: participant?.prefix ?? "",
                 playerTag: participant?.gamerTag ?? "",
                 pronouns: participant?.user?.genderPronoun ?? "",
-                twitter:
-                  participant?.user?.authorizations?.[0]?.externalUsername ??
-                  "",
+                socials: [
+                  {
+                    platform: "twitter",
+                    username:
+                      participant?.user?.authorizations?.[0]
+                        ?.externalUsername ?? "",
+                  },
+                ],
               };
             }),
           });
@@ -111,7 +112,7 @@ export function filterLiveSets(
                 teamName: "",
                 playerTag: "",
                 pronouns: "",
-                twitter: "",
+                socials: [{ platform: "", username: "" }],
               };
             }),
           });
@@ -153,9 +154,14 @@ export function filterSets(
                 teamName: participant?.prefix ?? "",
                 playerTag: participant?.gamerTag ?? "",
                 pronouns: participant?.user?.genderPronoun ?? "",
-                twitter:
-                  participant?.user?.authorizations?.[0]?.externalUsername ??
-                  "",
+                socials: [
+                  {
+                    platform: "twitter",
+                    username:
+                      participant?.user?.authorizations?.[0]
+                        ?.externalUsername ?? "",
+                  },
+                ],
               };
             }),
           });
@@ -173,7 +179,7 @@ export function filterSets(
                 teamName: "",
                 playerTag: "",
                 pronouns: "",
-                twitter: "",
+                socials: [{ platform: "", username: "" }],
               };
             }),
           });
@@ -222,39 +228,39 @@ export function getSetFormat(
   }
   return "Doubles";
 }
-export function changeSetFormat(
-  setFormat: string,
-  teams: UseFieldArrayReturn[],
-): void {
-  switch (setFormat) {
-    case "Singles":
-      for (let i = 0; i < teams.length; i++) {
-        teams[i].remove(1);
-      }
-      break;
-    case "Doubles":
-      for (let i = 0; i < teams.length; i++) {
-        if (teams[i].fields.length < 2) {
-          teams[i].append({
-            playerInfo: {
-              teamName: "",
-              playerTag: "",
-              pronouns: "",
-              twitter: "",
-            },
-            gameInfo: {
-              character: "Random",
-              altCostume: "Default",
-              port: 2 + i,
-            },
-          });
-        }
-      }
-      break;
-    default:
-      throw new Error(`Set format ${setFormat} does not exist!`);
-  }
-}
+// export function changeSetFormat(
+//   setFormat: string,
+//   teams: UseFieldArrayReturn[],
+// ): void {
+//   switch (setFormat) {
+//     case "Singles":
+//       for (let i = 0; i < teams.length; i++) {
+//         teams[i].remove(1);
+//       }
+//       break;
+//     case "Doubles":
+//       for (let i = 0; i < teams.length; i++) {
+//         if (teams[i].fields.length < 2) {
+//           teams[i].append({
+//             playerInfo: {
+//               teamName: "",
+//               playerTag: "",
+//               pronouns: "",
+//               twitter: "",
+//             },
+//             gameInfo: {
+//               character: "Random",
+//               altCostume: "Default",
+//               port: 2 + i,
+//             },
+//           });
+//         }
+//       }
+//       break;
+//     default:
+//       throw new Error(`Set format ${setFormat} does not exist!`);
+//   }
+// }
 
 export function findTeamWinner(
   players: SlippiPlayer[][],
@@ -287,30 +293,30 @@ export function findTeamWinner(
 //   return -1; // theoretically not possible
 // }
 
-export function findSlippiWinner(
-  winners: number[],
-  getValues: UseFormGetValues<Tournament>,
-) {
-  if (winners.length > 0) {
-    for (let i = 0; i < getValues("teams").length; i++) {
-      for (let j = 0; j < getValues(`teams.${i}.players`).length; j++) {
-        if (
-          getValues(`teams.${i}.players.${j}.gameInfo.port`) ===
-          winners[0] + 1 // always gonna have at least 1 winner, so why not compare it with the first winner player index since its always guaranteed to exist?
-        ) {
-          return i;
-        }
-      }
-    }
-  }
-  return undefined;
-}
+// export function findSlippiWinner(
+//   winners: number[],
+//   getValues: UseFormGetValues<Tournament>,
+// ) {
+//   if (winners.length > 0) {
+//     for (let i = 0; i < getValues("teams").length; i++) {
+//       for (let j = 0; j < getValues(`teams.${i}.players`).length; j++) {
+//         if (
+//           getValues(`teams.${i}.players.${j}.gameInfo.port`) ===
+//           winners[0] + 1 // always gonna have at least 1 winner, so why not compare it with the first winner player index since its always guaranteed to exist?
+//         ) {
+//           return i;
+//         }
+//       }
+//     }
+//   }
+//   return undefined;
+// }
 
-export function resetAllScores(
-  getValues: UseFormGetValues<Tournament>,
-  setValue: UseFormSetValue<Tournament>,
-) {
-  for (let i = 0; i < getValues("teams").length; i++) {
-    setValue(`teams.${i}.score`, 0);
-  }
-}
+// export function resetAllScores(
+//   getValues: UseFormGetValues<Tournament>,
+//   setValue: UseFormSetValue<Tournament>,
+// ) {
+//   for (let i = 0; i < getValues("teams").length; i++) {
+//     setValue(`teams.${i}.score`, 0);
+//   }
+// }

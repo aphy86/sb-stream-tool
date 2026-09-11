@@ -13,9 +13,9 @@
   "dependencies": {
     "@apollo/client": "^4.2.12",
     "@fontsource-variable/space-grotesk": "^5.3.0",
-    "@hookform/resolvers": "^5.9.1",
     "@parry-gg/client": "^1.0.12",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-hotkeys": "^0.10.0",
     "@tanstack/react-store": "^0.11.1",
     "@tanstack/react-table": "^9.1.2",
@@ -32,7 +32,6 @@
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-hook-form": "^7.85.0",
     "rxjs": "^7.8.2",
     "shadcn": "^4.19.0",
     "sonner": "^2.0.8",

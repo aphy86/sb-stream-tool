@@ -76,7 +76,13 @@ function toPlayer(participant: StartggParticipant): PlayerInfo {
     teamName: participant?.prefix ?? "",
     playerTag: participant?.gamerTag ?? "",
     pronouns: participant?.user?.genderPronoun ?? "",
-    twitter: participant?.user?.authorizations?.[0]?.externalUsername ?? "",
+    socials: [
+      {
+        platform: "twitter",
+        username:
+          participant?.user?.authorizations?.[0]?.externalUsername ?? "",
+      },
+    ],
   };
 }
 
@@ -102,7 +108,7 @@ function toEntrants(
         teamName: "",
         playerTag: "",
         pronouns: "",
-        twitter: "",
+        socials: [],
       })),
     });
   }

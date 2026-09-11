@@ -1,90 +1,71 @@
 import { useSettingsStore } from "@renderer/zustand/store";
-import Commentators from "./Commentators";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Alert, AlertTitle } from "./ui/alert";
 import { AlertCircleIcon } from "lucide-react";
-import FetchEvent from "./FetchEvent";
-import Header from "./Header";
-import Teams from "./Teams";
-import { useFormContext } from "react-hook-form";
-import { Tournament } from "@app/common";
 import { Button } from "./ui/button";
-import SetQuery from "./SetQuery";
-import EventSets from "./EventSets";
-import LiveEventSets from "./LiveEventSets";
-import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
-import { onSubmit, resetAllScores } from "@renderer/utils/helpers";
 import { getPlatformByEventUrl } from "@renderer/platform/registry";
-import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
 import { useRef } from "react";
-// import { sendToastMessage } from "./ui/toast";
+import { MatchDefaultValues, withForm } from "@renderer/utils/form";
+import Header from "./Header";
+import Commentators from "./Commentators";
+import Teams from "./Teams";
 
-function Match() {
-  const eventUrl = useSettingsStore((state) => state.eventUrl);
-  const eventSlug = useSettingsStore((state) => state.eventSlug);
-  const platform = getPlatformByEventUrl(eventUrl);
-  const apiKey = useSettingsStore(
-    (state) => state.credentials[platform.id] ?? "",
-  );
-  const matchRef = useRef<HTMLDivElement>(null);
-  const { handleSubmit, getValues, setValue } = useFormContext<Tournament>();
-  const submitHotkey = useSettingsStore(
-    (state) =>
-      state.shortcuts.get("submit") ??
-      (defaultShortcuts.get("submit") as Hotkey),
-  );
-  const resetScoreHotkey = useSettingsStore(
-    (state) =>
-      state.shortcuts.get("reset-score-global") ??
-      (defaultShortcuts.get("reset-score-global") as Hotkey),
-  );
+const Match = withForm({
+  defaultValues: MatchDefaultValues,
+  render: function MatchScreen({ form }) {
+    const eventUrl = useSettingsStore((state) => state.eventUrl);
+    const eventSlug = useSettingsStore((state) => state.eventSlug);
+    const platform = getPlatformByEventUrl(eventUrl);
+    const apiKey = useSettingsStore(
+      (state) => state.credentials[platform.id] ?? "",
+    );
+    const matchScreenRef = useRef<HTMLDivElement>(null);
 
-  useHotkey(submitHotkey, () => {
-    handleSubmit(onSubmit)().catch((error) => console.log(error));
-  });
-
-  useHotkey(resetScoreHotkey, () => resetAllScores(getValues, setValue));
-
-  return (
-    <div ref={matchRef} className="flex flex-col gap-2">
-      {apiKey === "" && eventUrl !== "" && (
-        <Alert>
-          <AlertCircleIcon />
-          <AlertTitle>
-            You must have a {platform.displayName} api key in order to use the
-            automated set fetching tools for the event ${eventSlug} (go to
-            settings to set it!)
-          </AlertTitle>
-        </Alert>
-      )}
-      <form
-        className="flex flex-col gap-2"
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        <FetchEvent />
-        <Header />
-        <Tabs defaultValue="players">
-          <TabsList className="w-full">
-            <TabsTrigger value="players">Players</TabsTrigger>
-            <TabsTrigger value="commentators">Commentators</TabsTrigger>
-          </TabsList>
-          <TabsContent value="players">
-            <Teams />
-          </TabsContent>
-          <TabsContent value="commentators">
-            <Commentators />
-          </TabsContent>
-        </Tabs>
-        <div className="flex flex-col gap-2 my-2">
-          <Button>UPDATE</Button>
-          <SetQuery />
-          <EventSets />
-          <LiveEventSets />
-        </div>
-      </form>
-    </div>
-  );
-}
+    return (
+      <div ref={matchScreenRef} className="flex flex-col gap-2">
+        {apiKey === "" && eventUrl !== "" && (
+          <Alert>
+            <AlertCircleIcon />
+            <AlertTitle>
+              You must have a {platform.displayName} api key in order to use the
+              automated set fetching tools for the event ${eventSlug} (go to
+              settings to set it!)
+            </AlertTitle>
+          </Alert>
+        )}
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <Header form={form} />
+          <Tabs defaultValue="players">
+            <TabsList className="w-full">
+              <TabsTrigger value="players">Players</TabsTrigger>
+              <TabsTrigger value="commentators">Commentators</TabsTrigger>
+            </TabsList>
+            <TabsContent value="players">
+              <Teams form={form} />
+            </TabsContent>
+            <TabsContent value="commentators">
+              <Commentators form={form} />
+            </TabsContent>
+          </Tabs>
+          <div className="flex flex-col gap-2 my-2">
+            <form.AppForm>
+              <Button>UPDATE OVERLAY</Button>
+              {/* <SetQuery />
+              <EventSets />
+              <LiveEventSets /> */}
+            </form.AppForm>
+          </div>
+        </form>
+      </div>
+    );
+  },
+});
 
 export default Match;

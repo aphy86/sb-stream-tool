@@ -3,6 +3,8 @@ export type SocialMediaAccount = {
   username: string;
 };
 
+export type SetFormat = "Singles" | "Doubles";
+
 export type PlayerInfo = {
   teamName: string;
   playerTag: string;
@@ -25,7 +27,7 @@ export type Team = {
 
 export type Commentator = {
   name: string;
-  twitter: string;
+  socials: SocialMediaAccount[];
   pronouns: string;
 };
 
@@ -35,8 +37,8 @@ export type GameInfo = {
   port: number;
 };
 
-export type Tournament = {
-  name: string;
+export type Match = {
+  tournamentName: string;
   bestOf: number;
   roundFormat: string;
   customRoundFormat: string;

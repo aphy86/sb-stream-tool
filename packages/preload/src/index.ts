@@ -3,7 +3,7 @@
 import {
   SlippiGameStartData,
   SlippiGameEndData,
-  Tournament,
+  Match,
   ObsConnectionStatus,
   SlippiConnectionStatus,
   GameProfileId,
@@ -26,7 +26,7 @@ function toastMessage(
   );
 }
 
-function updateOverlay(data: Tournament) {
+function updateOverlay(data: Match) {
   return ipcRenderer.invoke("overlay/update", data);
 }
 
