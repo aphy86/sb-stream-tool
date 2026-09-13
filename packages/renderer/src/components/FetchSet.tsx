@@ -16,8 +16,7 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { setFieldValues } from "@renderer/utils/helpers";
-// import { getPlatformByEventUrl } from "@renderer/platform/registry";
-import { StartggPlatform } from "@renderer/platform/startgg/StartggPlatform";
+import { getPlatformByEventUrl } from "@renderer/platform/registry";
 
 const ValidSet = z.string().min(1, "Set ID cannot be empty");
 
@@ -30,9 +29,8 @@ const FetchSet = withForm({
     const [sheetOpen, setSheetOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const timeoutId = useRef<NodeJS.Timeout>(undefined);
-    // const eventUrl = useSettingsStore((state) => state.eventUrl);
-    // const platform = getPlatformByEventUrl(eventUrl);
-    const platform = StartggPlatform;
+    const eventUrl = useSettingsStore((state) => state.eventUrl);
+    const platform = getPlatformByEventUrl(eventUrl);
     const apiKey =
       useSettingsStore((state) => state.credentials[platform.id]) ?? "";
 

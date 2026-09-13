@@ -9,8 +9,6 @@ export const { useAppForm, withForm } = createFormHook({
   formComponents: {},
 });
 
-export type MatchFormType = ReturnType<typeof useAppForm>
-
 export const MatchDefaultValues: Match = {
   tournamentName: "",
   bestOf: 1,

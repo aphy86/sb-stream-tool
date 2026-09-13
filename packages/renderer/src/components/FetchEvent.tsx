@@ -1,4 +1,3 @@
-/* eslint-disable no-useless-escape */
 import { useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -25,20 +24,17 @@ function FetchEvent() {
   const [statusMessage, setStatusMessage] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // const apiKey = useSettingsStore((state) => state.apiKey);
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
         <Button type="button" className="w-full">
-          Set Tournament
+          Set Tournament Event URL
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom">
         <SheetHeader>
-          <SheetTitle>Set Tournament</SheetTitle>
-          <SheetDescription>
-            Type in the start.gg event url (url will have /event after it){" "}
-          </SheetDescription>
+          <SheetTitle>Set Tournament Event URL</SheetTitle>
+          <SheetDescription>Type in the event URL</SheetDescription>
         </SheetHeader>
         <div className="px-4">
           <Label className="pb-1">Event URL</Label>
@@ -54,7 +50,7 @@ function FetchEvent() {
             onClick={() => {
               const eventId = resolveEventUrl(eventUrl);
               if (eventId === null) {
-                setStatusMessage("Invalid Start.gg URL");
+                setStatusMessage("Invalid URL");
                 return;
               }
               setStatusMessage(`Applying event ${eventUrl}...`);
@@ -64,7 +60,7 @@ function FetchEvent() {
               timeoutRef.current = setTimeout(() => {
                 setStatusMessage("");
                 setSheetOpen(false);
-              }, 2000);
+              }, 1500);
             }}
           >
             Update URL

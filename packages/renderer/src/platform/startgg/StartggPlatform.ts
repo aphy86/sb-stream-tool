@@ -23,7 +23,7 @@ const DISPLAY_NAME = "start.gg";
 const API_KEY_DOCS_URL = "https://developer.start.gg/docs/authentication/";
 const API_URL = "https://api.start.gg/gql/alpha";
 const PER_PAGE = 50;
-const UNKNOWN_EVENT_NAME = "unknown event";
+const UNKNOWN_EVENT_NAME = "Unknown Event";
 const UNKNOWN_ROUND_NAME = "Custom Round Name";
 
 const EVENT_URL_PATTERN =
@@ -168,6 +168,42 @@ class StartggClient implements PlatformClient {
     return toPlatformSet(data.set, data.set.event?.tournament?.name ?? "");
   }
 
+  private async getPageSets(
+    pageNum: number,
+    eventId: EventId,
+    opts: { upcomingOnly: boolean },
+  ) {
+    const document = opts.upcomingOnly
+      ? LiveEventSetsDocument
+      : EventSetsDocument;
+    const sets: PlatformSet[] = [];
+
+    const page = await this.runQuery(document, {
+      eventSlug: eventId.id,
+      page: pageNum,
+      perPage: PER_PAGE,
+    });
+
+    const totalPages = page.data?.event?.sets?.pageInfo?.totalPages ?? 0;
+
+    const tournamentName =
+      page.data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
+
+    for (const node of page.data?.event?.sets?.nodes ?? []) {
+      const mapped = mapSetListNode(node, tournamentName);
+      if (mapped) {
+        sets.push(mapped);
+      }
+    }
+
+    return {
+      totalPages: totalPages,
+      tournamentName: tournamentName,
+      sets: sets,
+    };
+  }
+  // work on this later, concurrent tasks is the answer
+  // perhaps add an option to limit to just next phase
   async getSets(
     eventId: EventId,
     opts: { upcomingOnly: boolean },
@@ -176,41 +212,117 @@ class StartggClient implements PlatformClient {
     const document = opts.upcomingOnly
       ? LiveEventSetsDocument
       : EventSetsDocument;
+
     const sets: PlatformSet[] = [];
 
     let tournamentName = UNKNOWN_EVENT_NAME;
     let totalPages = 1;
 
-    for (let page = 1; page <= totalPages; page++) {
-      const { data } = await this.runQuery(document, {
-        eventSlug: eventId.id,
-        page,
-        perPage: PER_PAGE,
-      });
+    const firstPage = await this.runQuery(document, {
+      eventSlug: eventId.id,
+      page: 1,
+      perPage: PER_PAGE,
+    });
 
-      if (page === 1) {
-        totalPages = data?.event?.sets?.pageInfo?.totalPages ?? 0;
-        tournamentName = data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
+    totalPages = firstPage.data?.event?.sets?.pageInfo?.totalPages ?? 0;
+
+    tournamentName =
+      firstPage.data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
+
+    const firstPageSets: PlatformSet[] = [];
+
+    for (const node of firstPage.data?.event?.sets?.nodes ?? []) {
+      const mapped = mapSetListNode(node, tournamentName);
+      if (mapped) {
+        firstPageSets.push(mapped);
       }
-
-      const pageSets: PlatformSet[] = [];
-      for (const node of data?.event?.sets?.nodes ?? []) {
-        const mapped = mapSetListNode(node, tournamentName);
-        if (mapped) {
-          pageSets.push(mapped);
-        }
-      }
-      sets.push(...pageSets);
-
-      onProgress?.({
-        loaded: page,
-        total: totalPages,
-        tournamentName,
-        sets: pageSets,
-      });
     }
 
+    sets.push(...firstPageSets);
+
+    onProgress?.({
+      loaded: 1,
+      total: totalPages,
+      tournamentName,
+      sets: firstPageSets,
+    });
+
+    if (totalPages <= 1) return sets;
+
+    const CONCURRENT_WORKERS = 6;
+
+    let currentPage = 1;
+    let pagesLoaded = 1;
+
+    const worker = async () => {
+      while (true) {
+        const page = currentPage++;
+        if (page > totalPages) return;
+
+        const { data } = await this.runQuery(document, {
+          eventSlug: eventId.id,
+          page,
+          perPage: PER_PAGE,
+        });
+
+        const pageSets: PlatformSet[] = [];
+        for (const node of data?.event?.sets?.nodes ?? []) {
+          const mapped = mapSetListNode(node, tournamentName);
+          if (mapped) {
+            pageSets.push(mapped);
+          }
+        }
+        sets.push(...pageSets);
+
+        pagesLoaded++;
+
+        onProgress?.({
+          loaded: pagesLoaded,
+          total: totalPages,
+          tournamentName,
+          sets: pageSets,
+        });
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENT_WORKERS, totalPages - 1) }, () =>
+        worker(),
+      ),
+    );
+
     return sets;
+    //   for (let page = 1; page <= totalPages; page++) {
+    //     const { data } = await this.runQuery(document, {
+    //       eventSlug: eventId.id,
+    //       page,
+    //       perPage: PER_PAGE,
+    //     });
+
+    //     if (page === 1) {
+    //       totalPages = data?.event?.sets?.pageInfo?.totalPages ?? 0;
+    //       tournamentName = data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
+    //     }
+
+    //     const pageSets: PlatformSet[] = [];
+    //     for (const node of data?.event?.sets?.nodes ?? []) {
+    //       const mapped = mapSetListNode(node, tournamentName);
+    //       if (mapped) {
+    //         pageSets.push(mapped);
+    //       }
+    //     }
+    //     sets.push(...pageSets);
+
+    //     onProgress?.({
+    //       loaded: page,
+    //       total: totalPages,
+    //       tournamentName,
+    //       sets: pageSets,
+    //     });
+    //   }
+
+    //   return sets;
+    // }
   }
 }
 

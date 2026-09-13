@@ -10,6 +10,8 @@ import Header from "./Header";
 import Commentators from "./Commentators";
 import Teams from "./Teams";
 import FetchSet from "./FetchSet";
+import FetchEvent from "./FetchEvent";
+import EventSets from "./EventSets";
 
 const Match = withForm({
   defaultValues: MatchDefaultValues,
@@ -34,6 +36,7 @@ const Match = withForm({
             </AlertTitle>
           </Alert>
         )}
+        <FetchEvent />
         <form
           className="flex flex-col gap-2"
           onSubmit={(e) => {
@@ -59,6 +62,7 @@ const Match = withForm({
             <form.AppForm>
               <Button>UPDATE OVERLAY</Button>
               <FetchSet form={form} />
+              <EventSets form={form} />
               {/* <SetQuery />
               <EventSets />
               <LiveEventSets /> */}
