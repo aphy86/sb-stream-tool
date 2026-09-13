@@ -9,6 +9,7 @@ import { MatchDefaultValues, withForm } from "@renderer/utils/form";
 import Header from "./Header";
 import Commentators from "./Commentators";
 import Teams from "./Teams";
+import FetchSet from "./FetchSet";
 
 const Match = withForm({
   defaultValues: MatchDefaultValues,
@@ -57,6 +58,7 @@ const Match = withForm({
           <div className="flex flex-col gap-2 my-2">
             <form.AppForm>
               <Button>UPDATE OVERLAY</Button>
+              <FetchSet form={form} />
               {/* <SetQuery />
               <EventSets />
               <LiveEventSets /> */}

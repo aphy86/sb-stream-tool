@@ -42,7 +42,7 @@ export type Match = {
   bestOf: number;
   roundFormat: string;
   customRoundFormat: string;
-  roundNumber?: number;
+  roundNumber?: string;
   setFormat: string;
   teams: Team[];
   commentators: Commentator[];

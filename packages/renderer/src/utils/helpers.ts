@@ -1,4 +1,4 @@
-import { Action, placements, type SlippiPlayer } from "@app/common";
+import { Action, Placement, placements, type SlippiPlayer } from "@app/common";
 
 import type { SetEntry, SetFormat } from "@renderer/types/tournament";
 // import { updateOverlay } from "@app/preload";
@@ -6,6 +6,7 @@ import {
   EventSetsQuery,
   LiveEventSetsQuery,
 } from "@renderer/types/__generated__/graphql-types";
+import { PlatformSet } from "@renderer/platform/types";
 
 export const tailwindTeamBorderColorLookup = {
   red: "border-red-500",
@@ -208,26 +209,26 @@ export function filterSets(
 //   }
 // }
 
-export function getSetFormat(
-  numPlayersInForm: number | undefined,
-  numPlayersInSet: number | undefined,
-): SetFormat {
-  const numPlayersToSetFormat: Record<number, SetFormat> = {
-    1: "Singles",
-    2: "Doubles",
-  };
-  if (
-    !numPlayersInForm ||
-    !numPlayersInSet ||
-    numPlayersInForm > numPlayersInSet
-  ) {
-    return "Singles";
-  }
-  if (numPlayersInForm === numPlayersInSet) {
-    return numPlayersToSetFormat[numPlayersInSet];
-  }
-  return "Doubles";
-}
+// export function getSetFormat(
+//   numPlayersInForm: number | undefined,
+//   numPlayersInSet: number | undefined,
+// ): SetFormat {
+//   const numPlayersToSetFormat: Record<number, SetFormat> = {
+//     1: "Singles",
+//     2: "Doubles",
+//   };
+//   if (
+//     !numPlayersInForm ||
+//     !numPlayersInSet ||
+//     numPlayersInForm > numPlayersInSet
+//   ) {
+//     return "Singles";
+//   }
+//   if (numPlayersInForm === numPlayersInSet) {
+//     return numPlayersToSetFormat[numPlayersInSet];
+//   }
+//   return "Doubles";
+// }
 // export function changeSetFormat(
 //   setFormat: string,
 //   teams: UseFieldArrayReturn[],
@@ -274,6 +275,99 @@ export function findTeamWinner(
     }
   }
   return -1;
+}
+
+export function getSetType(set: PlatformSet): SetFormat {
+  if (
+    set.entrants[0].players.length === 2 &&
+    set.entrants[1].players.length === 2
+  )
+    return "Doubles";
+  return "Singles";
+}
+
+export function parseMatchName(matchName: string): {
+  matchFormat: string;
+  round: string | null;
+  customMatchName: string | null;
+} {
+  const isRound = /^(Winners Round|Losers Round)/;
+  if (isRound.test(matchName)) {
+    const parsedMatchName = matchName.split(" ");
+    const roundNum = parsedMatchName.slice(2).join(" ");
+    return {
+      matchFormat: `${parsedMatchName[0]} ${parsedMatchName[1]}`,
+      round: roundNum,
+      customMatchName: null,
+    };
+  }
+  if (placements.includes(matchName as Placement)) {
+    return {
+      matchFormat: matchName,
+      round: null,
+      customMatchName: null,
+    };
+  }
+  return {
+    matchFormat: "Custom Match",
+    round: null,
+    customMatchName: matchName,
+  };
+}
+
+// tanstack form typing moment lol
+export function setFieldValues(form: any, set: PlatformSet) {
+  form.setFieldValue("tournamentName", set.tournamentName);
+
+  const setFormat = getSetType(set);
+
+  if (setFormat === "Doubles") {
+    form.setFieldValue(`teams[${0}].name`, set.entrants[0].name);
+    form.setFieldValue(`teams[${1}].name`, set.entrants[1].name);
+  }
+
+  form.setFieldValue("setFormat", setFormat);
+
+  const parsedMatchName = parseMatchName(set.matchName);
+  form.setFieldValue("roundFormat", parsedMatchName.matchFormat);
+
+  if (parsedMatchName.round) {
+    form.setFieldValue("roundNumber", parsedMatchName.round);
+  }
+
+  if (parsedMatchName.customMatchName) {
+    form.setFieldValue("customRoundFormat", parsedMatchName.customMatchName);
+  }
+
+  // PlatformSet entrants will always be of length 2
+  for (let i = 0; i < 2; i++) {
+    let numProcessed = 0;
+    for (let j = 0; j < form.getFieldValue(`teams[${i}].players`).length; j++) {
+      form.setFieldValue(`teams[${i}].players[${j}].playerInfo`, {
+        teamName: set.entrants[i].players[j].teamName,
+        playerTag: set.entrants[i].players[j].playerTag,
+        pronouns: set.entrants[i].players[j].pronouns,
+        socials: set.entrants[i].players[j].socials,
+      });
+      numProcessed++;
+    }
+
+    for (let k = numProcessed; k < set.entrants[i].players.length; k++) {
+      form.pushFieldValue(`teams[${i}].players`, {
+        playerInfo: {
+          teamName: set.entrants[i].players[k].teamName,
+          playerTag: set.entrants[i].players[k].playerTag,
+          pronouns: set.entrants[i].players[k].pronouns,
+          socials: set.entrants[i].players[k].socials,
+        },
+        gameInfo: {
+          character: "Random",
+          altCostume: "Default",
+          port: 1,
+        },
+      });
+    }
+  }
 }
 
 // kept for later purposes

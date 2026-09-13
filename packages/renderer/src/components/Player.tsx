@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Minus, Plus } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -194,6 +194,118 @@ const Player = withForm({
               }}
             </form.Field>
             <form.Field
+              name={`teams[${teamNumber}].players[${playerNumber}].playerInfo.socials`}
+              mode="array"
+            >
+              {(field) => {
+                return (
+                  <div className="grid col-start-1 col-end-9 grid-cols-8 gap-x-2 gap-y-2">
+                    <div className="col-start-1 col-end-9 flex w-full justify-between">
+                      <h6>Socials</h6>
+                      <div>
+                        <Button
+                          type="button"
+                          onClick={() =>
+                            form.pushFieldValue(
+                              `teams[${teamNumber}].players[${playerNumber}].playerInfo.socials`,
+                              { platform: "", username: "" },
+                            )
+                          }
+                        >
+                          <Plus />
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const length = form.getFieldValue(
+                              `teams[${teamNumber}].players[${playerNumber}].playerInfo.socials`,
+                            ).length;
+                            if (length > 1) {
+                              form.removeFieldValue(
+                                `teams[${teamNumber}].players[${playerNumber}].playerInfo.socials`,
+                                length - 1,
+                              );
+                            }
+                          }}
+                        >
+                          <Minus />
+                        </Button>
+                      </div>
+                    </div>
+                    {field.state.value.map((_, i) => {
+                      return (
+                        <div
+                          key={i}
+                          className="col-start-1 col-end-9 grid grid-cols-8 gap-x-2"
+                        >
+                          <form.Field
+                            name={`teams[${teamNumber}].players[${playerNumber}].playerInfo.socials[${i}].platform`}
+                          >
+                            {(subField) => {
+                              const isInvalid =
+                                subField.state.meta.isTouched &&
+                                !subField.state.meta.isValid;
+                              return (
+                                <Field
+                                  className="grid col-start-1 col-end-5"
+                                  data-invalid={isInvalid}
+                                >
+                                  <FieldLabel htmlFor={subField.name}>
+                                    Platform
+                                  </FieldLabel>
+                                  <Input
+                                    name={subField.name}
+                                    id={subField.name}
+                                    value={subField.state.value}
+                                    onChange={(e) =>
+                                      subField.handleChange(
+                                        e.currentTarget.value,
+                                      )
+                                    }
+                                    aria-invalid={isInvalid}
+                                  ></Input>
+                                </Field>
+                              );
+                            }}
+                          </form.Field>
+                          <form.Field
+                            name={`teams[${teamNumber}].players[${playerNumber}].playerInfo.socials[${i}].username`}
+                          >
+                            {(subField) => {
+                              const isInvalid =
+                                subField.state.meta.isTouched &&
+                                !subField.state.meta.isValid;
+                              return (
+                                <Field
+                                  className="grid col-start-5 col-end-9"
+                                  data-invalid={isInvalid}
+                                >
+                                  <FieldLabel htmlFor={subField.name}>
+                                    Username
+                                  </FieldLabel>
+                                  <Input
+                                    name={subField.name}
+                                    id={subField.name}
+                                    value={subField.state.value}
+                                    onChange={(e) =>
+                                      subField.handleChange(
+                                        e.currentTarget.value,
+                                      )
+                                    }
+                                    aria-invalid={isInvalid}
+                                  ></Input>
+                                </Field>
+                              );
+                            }}
+                          </form.Field>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            </form.Field>
+            <form.Field
               name={`teams[${teamNumber}].players[${playerNumber}].gameInfo.character`}
               listeners={{
                 onChange: () => {
@@ -209,7 +321,7 @@ const Player = withForm({
                 return (
                   <Field
                     data-invalid={isInvalid}
-                    className="grid-col-start-1 col-end-9"
+                    className="grid col-start-1 col-end-9"
                   >
                     <FieldLabel htmlFor={field.name}>Character</FieldLabel>
                     <Popover
@@ -222,6 +334,7 @@ const Player = withForm({
                           role="combobox"
                           id={field.name}
                           name={field.name}
+                          className="w-full"
                         >
                           {field.state.value}
                           <ChevronsUpDown></ChevronsUpDown>

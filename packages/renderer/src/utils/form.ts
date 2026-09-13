@@ -9,12 +9,14 @@ export const { useAppForm, withForm } = createFormHook({
   formComponents: {},
 });
 
+export type MatchFormType = ReturnType<typeof useAppForm>
+
 export const MatchDefaultValues: Match = {
   tournamentName: "",
   bestOf: 1,
   roundFormat: "Friendlies",
   customRoundFormat: "",
-  roundNumber: 0,
+  roundNumber: "",
   setFormat: "Singles",
   teams: [
     {
@@ -28,7 +30,7 @@ export const MatchDefaultValues: Match = {
             teamName: "",
             playerTag: "",
             pronouns: "",
-            socials: [],
+            socials: [{ platform: "", username: "" }],
           },
           gameInfo: {
             character: "Random",
@@ -49,7 +51,7 @@ export const MatchDefaultValues: Match = {
             teamName: "",
             playerTag: "",
             pronouns: "",
-            socials: [],
+            socials: [{ platform: "", username: "" }],
           },
           gameInfo: {
             character: "Random",

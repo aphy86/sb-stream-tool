@@ -83,7 +83,12 @@ function toPlayer(user: {
     playerTag: user.getGamerTag(),
     pronouns: user.getPronouns(),
     // parry has no Twitter field; LinkedAccount is only Discord and start.gg.
-    socials: [],
+    socials: [
+      {
+        platform: "",
+        username: "",
+      },
+    ],
   };
 }
 
@@ -115,7 +120,12 @@ function padEntrants(entrants: PlatformEntrant[]): PlatformEntrant[] {
         teamName: "",
         playerTag: "",
         pronouns: "",
-        socials: [],
+        socials: [
+          {
+            platform: "",
+            username: "",
+          },
+        ],
       })),
     });
   }

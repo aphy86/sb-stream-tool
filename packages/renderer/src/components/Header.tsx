@@ -112,13 +112,13 @@ const Header = withForm({
                             <FieldLabel htmlFor={field.name}>
                               Round Number
                             </FieldLabel>
-                            <Spinbox
+                            <Input
                               id={field.name}
                               name={field.name}
                               value={field.state.value}
-                              onValueChange={field.handleChange}
-                              min={0}
-                              max={100}
+                              onChange={(e) =>
+                                field.handleChange(e.currentTarget.value)
+                              }
                             />
                           </Field>
                         );

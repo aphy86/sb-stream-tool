@@ -108,7 +108,7 @@ function toEntrants(
         teamName: "",
         playerTag: "",
         pronouns: "",
-        socials: [],
+        socials: [{ platform: "", username: "" }],
       })),
     });
   }

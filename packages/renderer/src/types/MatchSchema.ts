@@ -42,7 +42,7 @@ const MatchSchema = z.strictObject({
   bestOf: z.number(),
   roundFormat: z.string(),
   customRoundFormat: z.string(),
-  roundNumber: z.number().optional(),
+  roundNumber: z.string().optional(),
   setFormat: z.string(),
   teams: z.array(TeamSchema),
   commentators: z.array(CommentatorSchema),
