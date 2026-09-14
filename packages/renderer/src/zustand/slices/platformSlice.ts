@@ -1,7 +1,7 @@
 import { type StateCreator } from "zustand";
 import { type StoreSliceType } from "./slice";
 import { send } from "@app/preload";
-import type { PlatformId } from "@renderer/platform/types";
+import type { PlatformId } from "@renderer/types/platform";
 
 export type PlatformSlice = {
   credentials: Partial<Record<PlatformId, string>>;

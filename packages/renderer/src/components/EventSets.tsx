@@ -3,7 +3,7 @@ import {
   platformById,
   resolveEventUrl,
 } from "@renderer/platform/registry";
-import { FetchProgress, PlatformSet } from "@renderer/platform/types";
+import { FetchProgress, PlatformSet } from "@renderer/types/platform";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
 import { setFieldValues } from "@renderer/utils/helpers";
 import { useSettingsStore } from "@renderer/zustand/store";

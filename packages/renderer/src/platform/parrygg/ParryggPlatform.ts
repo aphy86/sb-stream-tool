@@ -30,7 +30,7 @@ import type {
   ProgressCallback,
   SetState,
   TournamentPlatform,
-} from "../types";
+} from "@renderer/types/platform";
 
 const PLATFORM_ID: PlatformId = "parrygg";
 const DISPLAY_NAME = "parry.gg";

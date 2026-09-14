@@ -6,7 +6,7 @@ import {
   EventSetsQuery,
   LiveEventSetsQuery,
 } from "@renderer/types/__generated__/graphql-types";
-import { PlatformSet } from "@renderer/platform/types";
+import { PlatformSet } from "@renderer/types/platform";
 
 export const tailwindTeamBorderColorLookup = {
   red: "border-red-500",
@@ -52,8 +52,6 @@ export const ActionToName: Record<Action, string> = {
 // };
 
 // export const getBorderColor = (setFormat: SetFormat)
-export const sleep = (ms: number): Promise<unknown> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
 
 export function isInPlacementList(placement: string): boolean {
   for (const p of placements) {
@@ -414,3 +412,13 @@ export function setFieldValues(form: any, set: PlatformSet) {
 //     setValue(`teams.${i}.score`, 0);
 //   }
 // }
+
+export function getExponentialBackoff(attempt: number) {
+  const base = 1000;
+
+  const exp = base * 2 ** attempt;
+
+  const jitter = Math.random() * 500;
+
+  return Math.min(exp + jitter, 30000);
+}

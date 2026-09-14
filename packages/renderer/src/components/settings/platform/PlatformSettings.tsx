@@ -2,7 +2,7 @@ import { send } from "@app/preload";
 import { Button } from "@renderer/components/ui/button";
 import { Input } from "@renderer/components/ui/input";
 import { Label } from "@renderer/components/ui/label";
-import type { TournamentPlatform } from "@renderer/platform/types";
+import type { TournamentPlatform } from "@renderer/types/platform";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { useState } from "react";
 

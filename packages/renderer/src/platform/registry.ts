@@ -1,6 +1,10 @@
+import {
+  EventId,
+  PlatformId,
+  TournamentPlatform,
+} from "@renderer/types/platform";
 import { ParryggPlatform } from "./parrygg/ParryggPlatform";
 import { StartggPlatform } from "./startgg/StartggPlatform";
-import type { EventId, PlatformId, TournamentPlatform } from "./types";
 
 export const PLATFORMS: TournamentPlatform[] = [
   StartggPlatform,

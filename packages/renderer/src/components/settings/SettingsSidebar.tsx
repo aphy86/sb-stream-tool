@@ -12,7 +12,7 @@ import {
 } from "../ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { PLATFORMS } from "@renderer/platform/registry";
-import type { PlatformId } from "@renderer/platform/types";
+import type { PlatformId } from "@renderer/types/platform";
 import ParryggIcon from "@renderer/components/icons/ParryggIcon";
 import type { ComponentType, SVGProps } from "react";
 

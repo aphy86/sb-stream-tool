@@ -1,5 +1,10 @@
 /* eslint-disable no-useless-escape */
-import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client";
+import {
+  ApolloClient,
+  HttpLink,
+  InMemoryCache,
+  ServerError,
+} from "@apollo/client";
 import type { PlayerInfo } from "@app/common";
 import {
   EventSetsDocument,
@@ -16,7 +21,12 @@ import type {
   PlatformSet,
   SetState,
   TournamentPlatform,
-} from "../types";
+} from "@renderer/types/platform";
+import { RequestScheduler } from "@renderer/rate-limit/RequestScheduler";
+import {
+  PLATFORM_RATE_LIMIT_SCHEDULERS,
+  RATELIMIT_CONFIG,
+} from "@renderer/rate-limit/registry";
 
 const PLATFORM_ID: PlatformId = "startgg";
 const DISPLAY_NAME = "start.gg";
@@ -139,7 +149,12 @@ function mapSetListNode(
 }
 
 class StartggClient implements PlatformClient {
-  constructor(private readonly apiKey: string) {}
+  scheduler: RequestScheduler;
+  constructor(private readonly apiKey: string) {
+    this.scheduler =
+      PLATFORM_RATE_LIMIT_SCHEDULERS.get("startgg") ??
+      new RequestScheduler(RATELIMIT_CONFIG.startgg, 4);
+  }
 
   private runQuery<TData, TVariables extends Record<string, unknown>>(
     document: TypedDocumentNode<TData, TVariables>,
@@ -168,7 +183,7 @@ class StartggClient implements PlatformClient {
     return toPlatformSet(data.set, data.set.event?.tournament?.name ?? "");
   }
 
-  private async getPageSets(
+  private async getPage(
     pageNum: number,
     eventId: EventId,
     opts: { upcomingOnly: boolean },
@@ -176,20 +191,54 @@ class StartggClient implements PlatformClient {
     const document = opts.upcomingOnly
       ? LiveEventSetsDocument
       : EventSetsDocument;
+    try {
+      const page = await this.runQuery(document, {
+        eventSlug: eventId.id,
+        page: pageNum,
+        perPage: PER_PAGE,
+      });
+      return {
+        page: page,
+        rateLimit: false,
+      };
+    } catch (error) {
+      if (!ServerError.is(error) || error.statusCode !== 429) {
+        return {
+          page: null,
+          rateLimit: false,
+        };
+      }
+      return {
+        page: null,
+        rateLimit: true,
+      };
+    }
+  }
+
+  private async getPageSets(
+    pageNum: number,
+    eventId: EventId,
+    opts: { upcomingOnly: boolean },
+  ) {
     const sets: PlatformSet[] = [];
 
-    const page = await this.runQuery(document, {
-      eventSlug: eventId.id,
-      page: pageNum,
-      perPage: PER_PAGE,
-    });
+    const maxAttempts = 5;
+    let pageData;
 
-    const totalPages = page.data?.event?.sets?.pageInfo?.totalPages ?? 0;
+    for (let attemptNum = 0; attemptNum < maxAttempts; attemptNum++) {
+      await this.scheduler.acquire();
+      pageData = await this.getPage(pageNum, eventId, opts);
+      if (pageData.page) break;
+      this.scheduler.rateLimitReached(0);
+    }
+
+    const totalPages =
+      pageData?.page?.data?.event?.sets?.pageInfo?.totalPages ?? 0;
 
     const tournamentName =
-      page.data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
+      pageData?.page?.data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
 
-    for (const node of page.data?.event?.sets?.nodes ?? []) {
+    for (const node of pageData?.page?.data?.event?.sets?.nodes ?? []) {
       const mapped = mapSetListNode(node, tournamentName);
       if (mapped) {
         sets.push(mapped);
@@ -202,6 +251,7 @@ class StartggClient implements PlatformClient {
       sets: sets,
     };
   }
+
   // work on this later, concurrent tasks is the answer
   // perhaps add an option to limit to just next phase
   async getSets(
@@ -209,49 +259,28 @@ class StartggClient implements PlatformClient {
     opts: { upcomingOnly: boolean },
     onProgress?: (progress: FetchProgress) => void,
   ): Promise<PlatformSet[]> {
-    const document = opts.upcomingOnly
-      ? LiveEventSetsDocument
-      : EventSetsDocument;
+    const allSets: PlatformSet[] = [];
+    let eventName = "";
+    let totalPages = 0;
 
-    const sets: PlatformSet[] = [];
+    const firstPageSets = await this.getPageSets(1, eventId, opts);
 
-    let tournamentName = UNKNOWN_EVENT_NAME;
-    let totalPages = 1;
-
-    const firstPage = await this.runQuery(document, {
-      eventSlug: eventId.id,
-      page: 1,
-      perPage: PER_PAGE,
-    });
-
-    totalPages = firstPage.data?.event?.sets?.pageInfo?.totalPages ?? 0;
-
-    tournamentName =
-      firstPage.data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
-
-    const firstPageSets: PlatformSet[] = [];
-
-    for (const node of firstPage.data?.event?.sets?.nodes ?? []) {
-      const mapped = mapSetListNode(node, tournamentName);
-      if (mapped) {
-        firstPageSets.push(mapped);
-      }
-    }
-
-    sets.push(...firstPageSets);
+    eventName = firstPageSets.tournamentName;
+    totalPages = firstPageSets.totalPages;
+    allSets.push(...firstPageSets.sets);
 
     onProgress?.({
       loaded: 1,
       total: totalPages,
-      tournamentName,
-      sets: firstPageSets,
+      tournamentName: eventName,
+      sets: firstPageSets.sets,
     });
 
-    if (totalPages <= 1) return sets;
+    if (totalPages <= 1) return allSets;
 
-    const CONCURRENT_WORKERS = 6;
+    const CONCURRENT_WORKERS = 4;
 
-    let currentPage = 1;
+    let currentPage = 2;
     let pagesLoaded = 1;
 
     const worker = async () => {
@@ -259,28 +288,17 @@ class StartggClient implements PlatformClient {
         const page = currentPage++;
         if (page > totalPages) return;
 
-        const { data } = await this.runQuery(document, {
-          eventSlug: eventId.id,
-          page,
-          perPage: PER_PAGE,
-        });
+        const pageSets = await this.getPageSets(page, eventId, opts);
 
-        const pageSets: PlatformSet[] = [];
-        for (const node of data?.event?.sets?.nodes ?? []) {
-          const mapped = mapSetListNode(node, tournamentName);
-          if (mapped) {
-            pageSets.push(mapped);
-          }
-        }
-        sets.push(...pageSets);
+        allSets.push(...pageSets.sets);
 
         pagesLoaded++;
 
         onProgress?.({
           loaded: pagesLoaded,
           total: totalPages,
-          tournamentName,
-          sets: pageSets,
+          tournamentName: eventName,
+          sets: pageSets.sets,
         });
       }
     };
@@ -291,38 +309,7 @@ class StartggClient implements PlatformClient {
       ),
     );
 
-    return sets;
-    //   for (let page = 1; page <= totalPages; page++) {
-    //     const { data } = await this.runQuery(document, {
-    //       eventSlug: eventId.id,
-    //       page,
-    //       perPage: PER_PAGE,
-    //     });
-
-    //     if (page === 1) {
-    //       totalPages = data?.event?.sets?.pageInfo?.totalPages ?? 0;
-    //       tournamentName = data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
-    //     }
-
-    //     const pageSets: PlatformSet[] = [];
-    //     for (const node of data?.event?.sets?.nodes ?? []) {
-    //       const mapped = mapSetListNode(node, tournamentName);
-    //       if (mapped) {
-    //         pageSets.push(mapped);
-    //       }
-    //     }
-    //     sets.push(...pageSets);
-
-    //     onProgress?.({
-    //       loaded: page,
-    //       total: totalPages,
-    //       tournamentName,
-    //       sets: pageSets,
-    //     });
-    //   }
-
-    //   return sets;
-    // }
+    return allSets;
   }
 }
 
