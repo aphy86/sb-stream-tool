@@ -17,6 +17,7 @@ import {
   sortFn_text,
   tableFeatures,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Table,
   TableBody,
@@ -28,6 +29,7 @@ import {
 import { Atom } from "@tanstack/react-store";
 import { cn } from "@renderer/lib/utils";
 import { Input } from "./input";
+import { useRef } from "react";
 // import { useRef } from "react";
 
 export const features = tableFeatures({
@@ -76,6 +78,18 @@ export function DataTable<TData extends RowData>({
       rowSelection: rowSelectionAtom,
     },
   });
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  const rows = table.getRowModel().rows;
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 50,
+    overscan: 10,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
 
   return (
     <div>
@@ -86,7 +100,10 @@ export function DataTable<TData extends RowData>({
           onChange={(e) => table.setGlobalFilter(String(e.target.value))}
         />
       </div>
-      <div className={cn("overflow-auto rounded-md border max-h-96", className)}>
+      <div
+        ref={tableContainerRef}
+        className={cn("overflow-auto rounded-md border max-h-96", className)}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -103,20 +120,44 @@ export function DataTable<TData extends RowData>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      <table.FlexRender cell={cell} />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+          <TableBody
+            style={{
+              display: "block",
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              position: "relative",
+            }}
+          >
+            {virtualRows.length ? (
+              virtualRows.map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-index={virtualRow.index}
+                    data-state={row.getIsSelected() && "selected"}
+                    ref={(node) => {
+                      if (node) {
+                        rowVirtualizer.measureElement(node);
+                      }
+                    }}
+                    style={{
+                      // display: "table",
+                      // tableLayout: "fixed",
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        <table.FlexRender cell={cell} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell
