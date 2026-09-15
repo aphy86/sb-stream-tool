@@ -90,6 +90,13 @@ export function DataTable<TData extends RowData>({
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? totalSize - virtualRows[virtualRows.length - 1].end
+      : 0;
 
   return (
     <div>
@@ -120,13 +127,12 @@ export function DataTable<TData extends RowData>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody
-            style={{
-              display: "block",
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              position: "relative",
-            }}
-          >
+          <TableBody>
+            {paddingTop > 0 && (
+              <tr>
+                <td style={{ height: paddingTop }} />
+              </tr>
+            )}
             {virtualRows.length ? (
               virtualRows.map((virtualRow) => {
                 const row = rows[virtualRow.index];
@@ -139,15 +145,6 @@ export function DataTable<TData extends RowData>({
                       if (node) {
                         rowVirtualizer.measureElement(node);
                       }
-                    }}
-                    style={{
-                      // display: "table",
-                      // tableLayout: "fixed",
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -167,6 +164,11 @@ export function DataTable<TData extends RowData>({
                   No results.
                 </TableCell>
               </TableRow>
+            )}
+            {paddingBottom > 0 && (
+              <tr>
+                <td style={{ height: paddingBottom }} />
+              </tr>
             )}
           </TableBody>
         </Table>

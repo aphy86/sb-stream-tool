@@ -128,8 +128,11 @@ const EventSets = withForm({
             Get all sets in {savedEventSlug === "" ? "event" : savedEventSlug}
           </Button>
         </SheetTrigger>
-        <SheetContent side="bottom">
-          <SheetHeader className="flex flex-row gap-4">
+        <SheetContent
+          side="bottom"
+          className="flex flex-col max-h-[85vh] h-full"
+        >
+          <SheetHeader className="flex flex-row gap-4 shrink-0">
             <div className="flex items-center">
               {loading && <Spinner className="size-8" />}
             </div>
@@ -142,15 +145,16 @@ const EventSets = withForm({
               </SheetDescription>
             </div>
           </SheetHeader>
-          <div>
+          <div className="flex-1 min-h-0 overflow-hidden">
             <DataTable
               columns={columns}
               rowSelectionAtom={rowSelectionAtom}
               multiRows={false}
               data={filteredData}
+              className="max-h-96 min-h-0"
             />
           </div>
-          <SheetFooter>
+          <SheetFooter className="shrink-0">
             {statusMessage}
             <Button type="button" onClick={applySet}>
               Apply this set

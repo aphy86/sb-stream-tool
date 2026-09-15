@@ -22,8 +22,8 @@ const Spinbox = forwardRef<HTMLInputElement, SpinboxProps>(
       value,
       onValueChange,
       defaultValue = 0,
-      max = 100,
-      min = 0,
+      max = Number.MAX_SAFE_INTEGER,
+      min = Number.MIN_SAFE_INTEGER,
       showButtons = true,
       ...props
     },

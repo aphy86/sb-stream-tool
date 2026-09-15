@@ -1,7 +1,13 @@
-import { Action, Placement, placements, type SlippiPlayer } from "@app/common";
+import {
+  Action,
+  Match,
+  Placement,
+  placements,
+  type SlippiPlayer,
+} from "@app/common";
 
 import type { SetEntry, SetFormat } from "@renderer/types/tournament";
-// import { updateOverlay } from "@app/preload";
+import { updateOverlay } from "@app/preload";
 import {
   EventSetsQuery,
   LiveEventSetsQuery,
@@ -46,10 +52,10 @@ export const ActionToName: Record<Action, string> = {
   "team-right-score-down": "Decrease left team's score by 1",
 };
 
-// export const onSubmit = (data: Tournament) => {
-//   console.log(data);
-//   updateOverlay(data).catch((error) => console.log(error));
-// };
+export const onSubmit = (data: Match) => {
+  console.log(data);
+  updateOverlay(data).catch((error) => console.log(error));
+};
 
 // export const getBorderColor = (setFormat: SetFormat)
 
