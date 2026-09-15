@@ -1,5 +1,8 @@
 import { RateLimit } from "@renderer/types/rate-limit";
 
+/**
+ * bucket token-based request scheduling algorithm, allows for burst data fetches
+ */
 export class RequestScheduler {
   private tokens: number;
   private lastRefillAt: number;
@@ -46,6 +49,7 @@ export class RequestScheduler {
     this.lastRefillAt = now;
   }
 
+  // will eventually be true, because at some point, there will be enough tokens to stop the function
   async acquire(): Promise<void> {
     let acquired = false;
 
