@@ -6,7 +6,11 @@ import {
   type SlippiPlayer,
 } from "@app/common";
 
-import type { SetEntry, SetFormat } from "@renderer/types/tournament";
+import type {
+  SetEntry,
+  SetFormat,
+  SetTableEntry,
+} from "@renderer/types/tournament";
 import { updateOverlay } from "@app/preload";
 import {
   EventSetsQuery,
@@ -427,4 +431,13 @@ export function getExponentialBackoff(attempt: number) {
   const jitter = Math.random() * 500;
 
   return Math.min(exp + jitter, 30000);
+}
+
+export function mapSetToTableRow(set: PlatformSet): SetTableEntry {
+  return {
+    stream: set.stream,
+    matchName: set.matchName,
+    firstGroupName: set.entrants[0].name,
+    secondGroupName: set.entrants[1].name,
+  };
 }

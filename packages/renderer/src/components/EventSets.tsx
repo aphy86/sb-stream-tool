@@ -5,7 +5,7 @@ import {
 } from "@renderer/platform/registry";
 import { FetchProgress, PlatformSet } from "@renderer/types/platform";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { setFieldValues } from "@renderer/utils/helpers";
+import { mapSetToTableRow, setFieldValues } from "@renderer/utils/helpers";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { useCreateAtom, useSelector } from "@tanstack/react-store";
 import { RowSelectionState } from "@tanstack/react-table";
@@ -26,7 +26,6 @@ import { DataTable } from "./ui/data-table";
 import { columns } from "@renderer/types/columns";
 import { SetTableEntry } from "@renderer/types/tournament";
 
-// add concurrency to fetching
 const EventSets = withForm({
   defaultValues: MatchDefaultValues,
   render: function EventSetsSection({ form }) {
@@ -37,10 +36,17 @@ const EventSets = withForm({
         state.credentials[getPlatformByEventUrl(savedEventUrl).id] ?? "",
     );
 
+    const prevEventUrl = useRef("");
+
     const [statusMessage, setStatusMessage] = useState("");
 
     const [sheetOpen, setSheetOpen] = useState(false);
-    const [setsFetched, setSetsFetched] = useState<PlatformSet[]>([]);
+
+    // not ui state, just purely for table + form referencing purposes
+    const setsFetched = useRef<PlatformSet[]>([]);
+
+    // actual ui state
+    const [tableRows, setTableRows] = useState<SetTableEntry[]>([]);
 
     const [loading, setLoading] = useState(false);
 
@@ -53,27 +59,18 @@ const EventSets = withForm({
 
     const [tournamentName, setTournamentName] = useState("Unknown Event");
 
-    const filteredData = setsFetched.map((set) => {
-      return {
-        stream: set.stream,
-        matchName: set.matchName,
-        firstGroupName: set.entrants[0].name,
-        secondGroupName: set.entrants[1].name,
-      };
-    }) as SetTableEntry[];
-
     const applySet = () => {
       const selectedSetIndex = parseInt(Object.keys(selectedRow)[0]);
 
       if (
         Number.isNaN(selectedSetIndex) ||
-        selectedSetIndex > setsFetched.length
+        selectedSetIndex > setsFetched.current.length
       )
         return;
 
       setStatusMessage(`Applying set ${selectedSetIndex}...`);
 
-      setFieldValues(form, setsFetched[selectedSetIndex]);
+      setFieldValues(form, setsFetched.current[selectedSetIndex]);
 
       setStatusMessage(`Applied set ${selectedSetIndex}!`);
 
@@ -85,14 +82,17 @@ const EventSets = withForm({
     };
 
     const onFetchProgress = (progress: FetchProgress) => {
-      // totalPagesRef.current = progress.total;
       setTotalPages(progress.total);
       setPagesLoaded(progress.loaded);
       if (progress.loaded === 1) {
         setTournamentName(progress.tournamentName);
+        setsFetched.current = progress.sets;
+      } else {
+        setsFetched.current.push(...progress.sets);
       }
-      setSetsFetched((prevSets) =>
-        progress.loaded === 1 ? progress.sets : [...prevSets, ...progress.sets],
+      const newRows: SetTableEntry[] = progress.sets.map(mapSetToTableRow);
+      setTableRows((prev) =>
+        progress.loaded === 1 ? newRows : prev.concat(newRows),
       );
     };
 
@@ -118,7 +118,14 @@ const EventSets = withForm({
         open={sheetOpen}
         onOpenChange={(open) => {
           setSheetOpen(open);
-          if (open === false || savedEventSlug === "") return;
+          if (
+            open === false ||
+            savedEventSlug === "" ||
+            prevEventUrl.current === savedEventUrl
+          )
+            return;
+
+          prevEventUrl.current = savedEventUrl;
 
           fetchSets().catch((reason) => console.log(reason));
         }}
@@ -150,7 +157,7 @@ const EventSets = withForm({
               columns={columns}
               rowSelectionAtom={rowSelectionAtom}
               multiRows={false}
-              data={filteredData}
+              data={tableRows}
               className="max-h-96 min-h-0"
             />
           </div>

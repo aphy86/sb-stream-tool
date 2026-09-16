@@ -14,7 +14,11 @@ import {
   SheetTrigger,
 } from "./ui/sheet";
 import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
-import { resolveEventUrl } from "@renderer/platform/registry";
+import {
+  getPlatformByEventUrl,
+  platformById,
+  resolveEventUrl,
+} from "@renderer/platform/registry";
 
 function FetchEvent() {
   const savedEventUrl = useSettingsStore((state) => state.eventUrl);
@@ -23,6 +27,9 @@ function FetchEvent() {
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [statusMessage, setStatusMessage] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const savedApiKey = useSettingsStore(
+    (state) => state.credentials[getPlatformByEventUrl(savedEventUrl).id] ?? "",
+  );
 
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -48,6 +55,12 @@ function FetchEvent() {
           <Button
             type="button"
             onClick={() => {
+              const oldEventId = resolveEventUrl(savedEventUrl);
+              if (oldEventId) {
+                platformById(oldEventId.platform)
+                  .withApiKey(savedApiKey)
+                  .abortRequest();
+              }
               const eventId = resolveEventUrl(eventUrl);
               if (eventId === null) {
                 setStatusMessage("Invalid URL");

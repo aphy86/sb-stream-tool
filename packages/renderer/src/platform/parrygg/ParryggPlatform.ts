@@ -199,6 +199,9 @@ class ParryggClient implements PlatformClient {
     this.metadata = { [API_KEY_HEADER]: apiKey };
   }
 
+  abortRequest(): void {
+    console.log("Abort Request from parry.gg");
+  }
   // parry.gg returns most failures with an empty message.
   private toError(reason: unknown): unknown {
     if (!(reason instanceof RpcError)) {

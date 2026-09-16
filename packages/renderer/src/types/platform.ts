@@ -53,4 +53,6 @@ export interface PlatformClient {
     opts: { upcomingOnly: boolean },
     onProgress?: ProgressCallback,
   ): Promise<PlatformSet[]>;
+
+  abortRequest(): void;
 }

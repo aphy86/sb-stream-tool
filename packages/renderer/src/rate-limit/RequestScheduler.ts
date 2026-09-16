@@ -1,79 +1,75 @@
-import { RateLimit } from "@renderer/types/rate-limit";
-
-/**
- * bucket token-based request scheduling algorithm, allows for burst data fetches
- */
 export class RequestScheduler {
-  private tokens: number;
-  private lastRefillAt: number;
+  private readonly requestTimes: number[] = [];
 
-  private blockedUntil: number;
+  private blockedUntil = 0;
 
   // stats
-  private totalRequests: number;
-  private totalRateLimitsHit: number;
+  private totalRequests = 0;
+  private totalRateLimitsHit = 0;
 
   constructor(
-    private readonly rateLimit: RateLimit,
-    private readonly burstCapacity: number,
-  ) {
-    this.tokens = burstCapacity;
-    this.lastRefillAt = performance.now();
-    this.blockedUntil = 0;
+    private readonly maxRequests: number,
+    private readonly windowMs: number,
+  ) {}
 
-    this.totalRequests = 0;
-    this.totalRateLimitsHit = 0;
-  }
-
-  private async sleep(ms: number): Promise<void> {
+  private sleep(ms: number, signal?: AbortSignal): Promise<void> {
     if (ms <= 0) {
-      return;
+      return Promise.resolve();
     }
 
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => {
+      const onAbort = () => {
+        console.log("Aborting sleep");
+        clearTimeout(timer);
+        resolve();
+      };
+
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, ms);
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
   }
 
-  private refillTokens(now: number): void {
-    const elapsedMs = now - this.lastRefillAt;
-
-    if (elapsedMs <= 0) {
-      return;
-    }
-
-    const tokensPerMs = this.rateLimit.maxRequests / this.rateLimit.windowMs;
-
-    const tokensToAdd = elapsedMs * tokensPerMs;
-
-    this.tokens = Math.min(this.burstCapacity, this.tokens + tokensToAdd);
-
-    this.lastRefillAt = now;
-  }
-
-  // will eventually be true, because at some point, there will be enough tokens to stop the function
-  async acquire(): Promise<void> {
+  async acquire(signal?: AbortSignal): Promise<void> {
     let acquired = false;
 
     while (!acquired) {
+      if (signal?.aborted) {
+        console.log("Aborted");
+        return;
+      }
       const now = performance.now();
 
       if (now < this.blockedUntil) {
-        await this.sleep(this.blockedUntil - now);
+        await this.sleep(this.blockedUntil - now, signal);
       } else {
-        this.refillTokens(now);
+        // Remove requests that have fallen outside
+        // the rolling window.
+        while (
+          this.requestTimes.length > 0 &&
+          now - this.requestTimes[0] >= this.windowMs
+        ) {
+          this.requestTimes.shift();
+        }
 
-        if (this.tokens >= 1) {
-          this.tokens -= 1;
+        if (this.requestTimes.length < this.maxRequests) {
+          this.requestTimes.push(now);
           this.totalRequests++;
           acquired = true;
         } else {
-          const tokensPerMs =
-            this.rateLimit.maxRequests / this.rateLimit.windowMs;
+          // The oldest request determines when another
+          // request can enter the window.
+          const oldestRequest = this.requestTimes[0];
 
-          const waitTimeMs = Math.ceil((1 - this.tokens) / tokensPerMs);
+          const waitMs = this.windowMs - (now - oldestRequest) + 1;
 
-          await this.sleep(waitTimeMs);
+          await this.sleep(waitMs, signal);
         }
       }
+      // console.log(this.requestTimes);
     }
   }
 
@@ -85,13 +81,15 @@ export class RequestScheduler {
     const delay =
       retryMs > 0
         ? retryMs + Math.random() * 1000
-        : this.rateLimit.windowMs + Math.random() * 2000;
+        : this.windowMs + Math.random() * 2000;
 
-    const blockedUntil = now + delay;
+    this.blockedUntil = Math.max(this.blockedUntil, now + delay);
+  }
 
-    this.blockedUntil = Math.max(this.blockedUntil, blockedUntil);
-
-    this.tokens = 0;
-    this.lastRefillAt = this.blockedUntil;
+  getStats() {
+    return {
+      totalRequests: this.totalRequests,
+      totalRateLimitsHit: this.totalRateLimitsHit,
+    };
   }
 }
