@@ -1,3 +1,7 @@
+/**
+ * Sliding window rate limiter implementation for requests
+ */
+
 export class RequestScheduler {
   private readonly requestTimes: number[] = [];
 
@@ -19,7 +23,6 @@ export class RequestScheduler {
 
     return new Promise((resolve) => {
       const onAbort = () => {
-        console.log("Aborting sleep");
         clearTimeout(timer);
         resolve();
       };
@@ -38,7 +41,6 @@ export class RequestScheduler {
 
     while (!acquired) {
       if (signal?.aborted) {
-        console.log("Aborted");
         return;
       }
       const now = performance.now();
@@ -46,8 +48,6 @@ export class RequestScheduler {
       if (now < this.blockedUntil) {
         await this.sleep(this.blockedUntil - now, signal);
       } else {
-        // Remove requests that have fallen outside
-        // the rolling window.
         while (
           this.requestTimes.length > 0 &&
           now - this.requestTimes[0] >= this.windowMs
@@ -60,8 +60,6 @@ export class RequestScheduler {
           this.totalRequests++;
           acquired = true;
         } else {
-          // The oldest request determines when another
-          // request can enter the window.
           const oldestRequest = this.requestTimes[0];
 
           const waitMs = this.windowMs - (now - oldestRequest) + 1;
@@ -69,7 +67,6 @@ export class RequestScheduler {
           await this.sleep(waitMs, signal);
         }
       }
-      // console.log(this.requestTimes);
     }
   }
 

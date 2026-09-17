@@ -148,8 +148,6 @@ function mapSetListNode(
   const mapped = toPlatformSet(node, tournamentName);
   return mapped.entrants.length > 0 ? mapped : null;
 }
-
-// add aborting requests
 class StartggClient implements PlatformClient {
   scheduler: RequestScheduler;
   static abortControllers: Set<AbortController> = new Set();
@@ -163,14 +161,9 @@ class StartggClient implements PlatformClient {
   }
 
   abortRequest(): void {
-    console.log(
-      "Aborting request, controllers:",
-      StartggClient.abortControllers.size,
-    );
     for (let controller of StartggClient.abortControllers) {
       controller.abort();
     }
-    // console.log("Aborting request");
   }
 
   private runQuery<TData, TVariables extends Record<string, unknown>>(
@@ -215,6 +208,7 @@ class StartggClient implements PlatformClient {
       error?: ErrorLike;
     } | null;
     rateLimit: boolean;
+    aborted: boolean;
   }> {
     const document = opts.upcomingOnly
       ? LiveEventSetsDocument
@@ -232,20 +226,21 @@ class StartggClient implements PlatformClient {
       return {
         page: page,
         rateLimit: false,
+        aborted: false,
       };
     } catch (error) {
       if (ServerError.is(error) && error.statusCode === 429) {
         return {
           page: null,
           rateLimit: true,
+          aborted: false,
         };
       }
-
       if (signal?.aborted) {
-        console.log("Signal aborted");
         return {
           page: null,
           rateLimit: true,
+          aborted: true,
         };
       }
       throw error;
@@ -266,22 +261,15 @@ class StartggClient implements PlatformClient {
     for (let attemptNum = 0; attemptNum < maxAttempts; attemptNum++) {
       await this.scheduler.acquire(signal);
 
-      console.log(signal?.aborted);
-      if (signal?.aborted) {
-        console.log("Aborted");
-        return {};
-      }
+      if (signal?.aborted) return {};
 
       pageData = await this.getPage(pageNum, eventId, opts, signal);
 
-      if (pageData.page) {
-        break;
-      } else if (pageData.rateLimit) {
-        this.scheduler.rateLimitReached(0);
-      } else {
-        console.log("Aborted");
-        return {};
-      }
+      if (pageData.page) break;
+
+      if (pageData.rateLimit) this.scheduler.rateLimitReached(0);
+
+      if (pageData.aborted) return {};
     }
 
     const totalPages =
@@ -326,21 +314,18 @@ class StartggClient implements PlatformClient {
         abortController.signal,
       );
 
-      eventName = firstPageSets.tournamentName ?? UNKNOWN_EVENT_NAME;
-      totalPages = firstPageSets.totalPages ?? 0;
-
       if (firstPageSets.sets) {
         allSets.push(...firstPageSets.sets);
-      } else {
-        console.log("Aborted");
-        return [];
-      }
+      } else return [];
+
+      eventName = firstPageSets.tournamentName;
+      totalPages = firstPageSets.totalPages;
 
       onProgress?.({
         loaded: 1,
         total: totalPages,
         tournamentName: eventName,
-        sets: firstPageSets.sets ? firstPageSets.sets : [],
+        sets: firstPageSets.sets,
       });
 
       if (totalPages <= 1) return allSets;
@@ -352,11 +337,7 @@ class StartggClient implements PlatformClient {
 
       const worker = async () => {
         while (true) {
-          console.log("working!");
-          if (abortController.signal?.aborted) {
-            console.log("Aborted worker");
-            return;
-          }
+          if (abortController.signal?.aborted) return;
 
           const page = currentPage++;
 
@@ -370,10 +351,7 @@ class StartggClient implements PlatformClient {
 
           if (pageSets.sets) {
             allSets.push(...pageSets.sets);
-          } else {
-            console.log("Aborted worker");
-            return;
-          }
+          } else return;
 
           pagesLoaded++;
 
@@ -381,7 +359,7 @@ class StartggClient implements PlatformClient {
             loaded: pagesLoaded,
             total: totalPages,
             tournamentName: eventName,
-            sets: pageSets.sets ? pageSets.sets : [],
+            sets: pageSets.sets,
           });
         }
       };
