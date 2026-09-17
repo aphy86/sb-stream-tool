@@ -30,26 +30,31 @@ function App() {
       <GameProfileProvider>
         <GlobalHotkeys>
           <Router hook={useHashLocation}>
-            <Layout>
-              <Switch>
-                <Route path="/" component={() => <Match form={form} />}></Route>
-                <Route path="/settings" nest>
-                  <Settings>
-                    <Switch>
-                      <Route path="/" component={Obs}></Route>
-                      <Route path="/obs" component={Obs}></Route>
-                      {PLATFORMS.map((platform) => (
-                        <Route key={platform.id} path={`/${platform.id}`}>
-                          <PlatformSettings platform={platform} />
-                        </Route>
-                      ))}
-                      <Route path="/slippi" component={Slippi}></Route>
-                      <Route path="/shortcuts" component={Shortcuts}></Route>
-                    </Switch>
-                  </Settings>
-                </Route>
-              </Switch>
-            </Layout>
+            <form.AppForm>
+              <Layout>
+                <Switch>
+                  <Route
+                    path="/"
+                    component={() => <Match form={form} />}
+                  ></Route>
+                  <Route path="/settings" nest>
+                    <Settings>
+                      <Switch>
+                        <Route path="/" component={Obs}></Route>
+                        <Route path="/obs" component={Obs}></Route>
+                        {PLATFORMS.map((platform) => (
+                          <Route key={platform.id} path={`/${platform.id}`}>
+                            <PlatformSettings platform={platform} />
+                          </Route>
+                        ))}
+                        <Route path="/slippi" component={Slippi}></Route>
+                        <Route path="/shortcuts" component={Shortcuts}></Route>
+                      </Switch>
+                    </Settings>
+                  </Route>
+                </Switch>
+              </Layout>
+            </form.AppForm>
           </Router>
         </GlobalHotkeys>
       </GameProfileProvider>

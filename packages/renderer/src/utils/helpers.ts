@@ -3,6 +3,7 @@ import {
   Match,
   Placement,
   placements,
+  Team,
   type SlippiPlayer,
 } from "@app/common";
 
@@ -378,41 +379,21 @@ export function setFieldValues(form: any, set: PlatformSet) {
   }
 }
 
-// kept for later purposes
-// export function findSlippiWinner(
-//   teams: SlippiPlayer[][], // always guaranteed to be of at least size 1 per array index, but still handled in the method just in case
-//   isTeams: boolean,
-//   winner: number,
-// ) {
-//   for (let i = 0; i < teams.length; i++) {
-//     if (isTeams && teams[i].length > 0 && teams[i][0].playerId === winner) {
-//       return i;
-//     }
-//     if (!isTeams && teams[i].length > 0 && teams[i][0].teamId === winner) {
-//       return i;
-//     }
-//   }
-//   return -1; // theoretically not possible
-// }
-
-// export function findSlippiWinner(
-//   winners: number[],
-//   getValues: UseFormGetValues<Tournament>,
-// ) {
-//   if (winners.length > 0) {
-//     for (let i = 0; i < getValues("teams").length; i++) {
-//       for (let j = 0; j < getValues(`teams.${i}.players`).length; j++) {
-//         if (
-//           getValues(`teams.${i}.players.${j}.gameInfo.port`) ===
-//           winners[0] + 1 // always gonna have at least 1 winner, so why not compare it with the first winner player index since its always guaranteed to exist?
-//         ) {
-//           return i;
-//         }
-//       }
-//     }
-//   }
-//   return undefined;
-// }
+export function findSlippiWinner(winners: number[], teams: Team[]) {
+  if (winners.length > 0) {
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = 0; j < teams[i].players.length; j++) {
+        if (
+          teams[i].players[j].gameInfo.port ===
+          winners[0] + 1 // always gonna have at least 1 winner, so why not compare it with the first winner player index since its always guaranteed to exist?
+        ) {
+          return i;
+        }
+      }
+    }
+  }
+  return undefined;
+}
 
 // export function resetAllScores(
 //   getValues: UseFormGetValues<Tournament>,

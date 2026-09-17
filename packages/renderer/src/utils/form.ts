@@ -2,7 +2,7 @@ import type { Match, Team } from "@app/common";
 import { fieldContext, formContext } from "@renderer/hooks/contexts";
 import { createFormHook } from "@tanstack/react-form";
 
-export const { useAppForm, withForm } = createFormHook({
+export const { useAppForm, withForm, useTypedAppFormContext } = createFormHook({
   fieldContext,
   formContext,
   fieldComponents: {},

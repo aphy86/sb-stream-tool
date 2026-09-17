@@ -31,6 +31,11 @@ import type {
   SetState,
   TournamentPlatform,
 } from "@renderer/types/platform";
+import { RequestScheduler } from "@renderer/rate-limit/RequestScheduler";
+import {
+  PLATFORM_RATE_LIMIT_SCHEDULERS,
+  RATELIMIT_CONFIG,
+} from "@renderer/rate-limit/registry";
 
 const PLATFORM_ID: PlatformId = "parrygg";
 const DISPLAY_NAME = "parry.gg";
@@ -195,12 +200,24 @@ function tournamentNameFromHierarchy(hierarchy: Hierarchy | undefined) {
 class ParryggClient implements PlatformClient {
   private readonly metadata: Record<string, string>;
 
+  scheduler: RequestScheduler;
+
+  static abortControllers: Set<AbortController> = new Set();
+
   constructor(apiKey: string) {
     this.metadata = { [API_KEY_HEADER]: apiKey };
+    this.scheduler =
+      PLATFORM_RATE_LIMIT_SCHEDULERS.get("parrygg") ??
+      new RequestScheduler(
+        RATELIMIT_CONFIG.parrygg.maxRequests,
+        RATELIMIT_CONFIG.parrygg.windowMs,
+      );
   }
 
   abortRequest(): void {
-    console.log("Abort Request from parry.gg");
+    for (let controller of ParryggClient.abortControllers) {
+      controller.abort();
+    }
   }
   // parry.gg returns most failures with an empty message.
   private toError(reason: unknown): unknown {

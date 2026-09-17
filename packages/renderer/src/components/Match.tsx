@@ -62,10 +62,8 @@ const Match = withForm({
             <form.AppForm>
               <Button>UPDATE OVERLAY</Button>
               <FetchSet form={form} />
-              <EventSets form={form} />
-              {/* <SetQuery />
-              <EventSets />
-              <LiveEventSets /> */}
+              <EventSets form={form} live={false} />
+              <EventSets form={form} live={true} />
             </form.AppForm>
           </div>
         </form>

@@ -28,7 +28,10 @@ import { SetTableEntry } from "@renderer/types/tournament";
 
 const EventSets = withForm({
   defaultValues: MatchDefaultValues,
-  render: function EventSetsSection({ form }) {
+  props: {
+    live: false,
+  },
+  render: function EventSetsSection({ form, live }) {
     const savedEventSlug = useSettingsStore((state) => state.eventSlug);
     const savedEventUrl = useSettingsStore((state) => state.eventUrl);
     const savedApiKey = useSettingsStore(
@@ -106,7 +109,7 @@ const EventSets = withForm({
       await platformById(eventId.platform).withApiKey(savedApiKey).getSets(
         eventId,
         {
-          upcomingOnly: false,
+          upcomingOnly: live,
         },
         onFetchProgress,
       );
@@ -132,7 +135,8 @@ const EventSets = withForm({
       >
         <SheetTrigger asChild>
           <Button disabled={savedApiKey === "" || savedEventSlug === ""}>
-            Get all sets in {savedEventSlug === "" ? "event" : savedEventSlug}
+            Get {live === true ? "all live" : "all"} sets in{" "}
+            {savedEventSlug === "" ? "event" : savedEventSlug}
           </Button>
         </SheetTrigger>
         <SheetContent
