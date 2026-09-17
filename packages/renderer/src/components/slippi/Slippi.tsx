@@ -27,10 +27,10 @@ function Slippi() {
           <RadioGroupItem value="folder" id="r2" />
           <Label htmlFor="r2">Connect via folder</Label>
         </div>
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <RadioGroupItem value="dolphin" id="r3" />
           <Label htmlFor="r3">Connect via Dolphin connection</Label>
-        </div>
+        </div> */}
         <div className="flex items-center gap-3">
           <RadioGroupItem value="disabled" id="r4" />
           <Label htmlFor="r4">Disabled</Label>

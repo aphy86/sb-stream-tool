@@ -40,6 +40,10 @@ export class SlippiFolderRelay implements SlippiRelay {
       ignoreInitial: true,
     });
     EventStream.notify("toast", `Saved and connected to ${listenPath}`);
+    EventStream.notify("connection", {
+      type: "slippi-folder",
+      status: "connected",
+    });
   }
 
   async setBrowserWindow(browserWindow: BrowserWindow) {
@@ -90,6 +94,10 @@ export class SlippiFolderRelay implements SlippiRelay {
         gameEnd = game?.gameDataController.getGameEnd();
       } catch (err) {
         EventStream.notify("toast", "Slippi Relay Error");
+        EventStream.notify("connection", {
+          type: "slippi-folder",
+          status: "error",
+        });
         return;
       }
       if (!gameState?.settings && settings) {
@@ -156,6 +164,10 @@ export class SlippiFolderRelay implements SlippiRelay {
     if (this.listenPath) {
       this.watcher?.unwatch(this.listenPath);
       this.watcher?.close();
+      EventStream.notify("connection", {
+        type: "slippi-folder",
+        status: "disconnected",
+      });
       this.listenPath = "";
     }
 

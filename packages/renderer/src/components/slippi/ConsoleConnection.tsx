@@ -18,6 +18,10 @@ function ConsoleConnection() {
   );
   const [ip, setIp] = useState(savedIp);
   const [port, setPort] = useState(savedPort.toString());
+  const connectionStatus = useSettingsStore(
+    (state) => state.connectionStatuses,
+  ).get("slippi-wii");
+
   return (
     <form
       onSubmit={(e) => {
@@ -51,6 +55,7 @@ function ConsoleConnection() {
           Note: You must have launched Slippi Melee in order to connect! (and
           ensure the slippi networking feature is on)
         </h2>
+        <h3>Connection Status: {connectionStatus}</h3>
       </div>
       <div className="flex gap-2">
         <div className="flex flex-col gap-1">

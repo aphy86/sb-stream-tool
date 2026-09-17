@@ -23,6 +23,7 @@ import {
 } from "@app/common";
 import { Hotkey } from "@tanstack/react-hotkeys";
 import { PLATFORMS, resolveEventUrl } from "@renderer/platform/registry";
+import { createConnectionStatusSlice } from "./slices/connectionStatusSlice";
 
 enableMapSet();
 
@@ -35,6 +36,7 @@ export const useSettingsStore = create<StoreSliceType>()(
       ...createObsWebsocketSlice(...a),
       ...createEventSlice(...a),
       ...createShortcutsSlice(...a),
+      ...createConnectionStatusSlice(...a),
     })),
   ),
 );

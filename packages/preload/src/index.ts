@@ -4,8 +4,6 @@ import {
   SlippiGameStartData,
   SlippiGameEndData,
   Match,
-  ObsConnectionStatus,
-  SlippiConnectionStatus,
   GameProfileId,
 } from "@app/common";
 import { ipcRenderer } from "electron";
@@ -46,19 +44,11 @@ function onNewSlippiGameEndData(callback: (winner: SlippiGameEndData) => void) {
   );
 }
 
-function onObsConnectionStatusChange(
-  callback: (status: ObsConnectionStatus) => void,
+function onConnectionStatusChange(
+  callback: (type: string, status: string) => void,
 ) {
-  ipcRenderer.on("obs:connection-status-change", (_event, status) =>
-    callback(status),
-  );
-}
-
-function onSlippiRelayConnectionStatusChange(
-  callback: (status: SlippiConnectionStatus) => void,
-) {
-  ipcRenderer.on("slippi:connection-status-change", (_event, status) =>
-    callback(status),
+  ipcRenderer.on("connection-status", (_event, type, status) =>
+    callback(type, status),
   );
 }
 
@@ -77,7 +67,6 @@ export {
   onNewSlippiGameData,
   onNewSlippiGameEndData,
   clearAllListeners,
-  onObsConnectionStatusChange,
-  onSlippiRelayConnectionStatusChange,
+  onConnectionStatusChange,
   onGameProfileChange,
 };

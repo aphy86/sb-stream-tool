@@ -81,25 +81,41 @@ export class SlippiConsoleRelay implements SlippiRelay {
       switch (data) {
         case ConnectionStatus.CONNECTED:
           EventStream.notify("toast", `Connected to ${this.ip}:${this.port}`);
-          EventStream.notify("slippi", { type: "wii", status: "connected" });
+          EventStream.notify("connection", {
+            type: "slippi-wii",
+            status: "connected",
+          });
           break;
         case ConnectionStatus.DISCONNECTED:
           EventStream.notify("toast", `Slippi Wii Relay disconnected`);
-          EventStream.notify("slippi", { type: "wii", status: "disconnected" });
+          EventStream.notify("connection", {
+            type: "slippi-wii",
+            status: "disconnected",
+          });
 
           break;
         case ConnectionStatus.RECONNECT_WAIT:
           EventStream.notify("toast", `Reconnecting ${this.ip}:${this.port}`);
-          EventStream.notify("slippi", { type: "wii", status: "connecting" });
+          EventStream.notify("connection", {
+            type: "slippi-wii",
+            status: "connecting",
+          });
           break;
         default:
           EventStream.notify("toast", `Connecting to ${this.ip}:${this.port}`);
-          EventStream.notify("slippi", { type: "wii", status: "connecting" });
+          EventStream.notify("connection", {
+            type: "slippi-wii",
+            status: "connecting",
+          });
       }
     }); // this for any sort of connection success/error status changes
-    this.connection.on("error", (err) =>
-      EventStream.notify("toast", `Slippi Wii Connection error, ${err}`),
-    ); // this for purely connection errors
+    this.connection.on("error", (err) => {
+      EventStream.notify("toast", `Slippi Wii Connection error, ${err}`);
+      EventStream.notify("connection", {
+        type: "slippi-wii",
+        status: "error",
+      });
+    }); // this for purely connection errors
 
     // any sort of event triggered will be passed onto the parser for handling
     this.stream.on("slp-command", ({ command, payload }) =>
@@ -181,6 +197,7 @@ export class SlippiConsoleRelay implements SlippiRelay {
 
   async stop() {
     this.connection.disconnect();
+
     this.clearPrevGame();
   }
 }
