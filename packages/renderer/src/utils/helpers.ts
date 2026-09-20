@@ -422,3 +422,12 @@ export function mapSetToTableRow(set: PlatformSet): SetTableEntry {
     secondGroupName: set.entrants[1].name,
   };
 }
+
+export function isAbortError(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (typeof error === "object" &&
+      error !== null &&
+      (error as { name?: unknown }).name === "AbortError")
+  );
+}

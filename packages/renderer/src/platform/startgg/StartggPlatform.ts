@@ -1,6 +1,5 @@
 import {
   ApolloClient,
-  ErrorLike,
   HttpLink,
   InMemoryCache,
   ServerError,
@@ -9,7 +8,6 @@ import type { PlayerInfo } from "@app/common";
 import {
   EventSetsDocument,
   LiveEventSetsDocument,
-  LiveEventSetsQuery,
   SetEntrantsDocument,
 } from "@renderer/types/__generated__/graphql-types";
 import type { TypedDocumentNode } from "@graphql-typed-document-node/core";
@@ -28,6 +26,7 @@ import {
   PLATFORM_RATE_LIMIT_SCHEDULERS,
   RATELIMIT_CONFIG,
 } from "@renderer/rate-limit/registry";
+import { isAbortError } from "@renderer/utils/helpers";
 
 const PLATFORM_ID: PlatformId = "startgg";
 const DISPLAY_NAME = "start.gg";
@@ -36,6 +35,7 @@ const API_URL = "https://api.start.gg/gql/alpha";
 const PER_PAGE = 50;
 const UNKNOWN_EVENT_NAME = "Unknown Event";
 const UNKNOWN_ROUND_NAME = "Custom Round Name";
+const MAX_PAGE_ATTEMPTS = 5;
 
 const EVENT_URL_PATTERN =
   /^https:\/\/(?:www\.)?start\.gg\/tournament\/([^\/?#]+)\/event\/([^\/?#]+)(?:[\/?#].*)?$/;
@@ -151,6 +151,11 @@ function mapSetListNode(
 class StartggClient implements PlatformClient {
   scheduler: RequestScheduler;
   static abortControllers: Set<AbortController> = new Set();
+
+  private currentAbortController: AbortController | null;
+
+  private generation: number;
+
   constructor(private readonly apiKey: string) {
     this.scheduler =
       PLATFORM_RATE_LIMIT_SCHEDULERS.get("startgg") ??
@@ -158,10 +163,12 @@ class StartggClient implements PlatformClient {
         RATELIMIT_CONFIG.startgg.maxRequests,
         RATELIMIT_CONFIG.startgg.windowMs,
       );
+    this.currentAbortController = null;
+    this.generation = 0;
   }
 
   abortRequest(): void {
-    for (let controller of StartggClient.abortControllers) {
+    for (const controller of StartggClient.abortControllers) {
       controller.abort();
     }
   }
@@ -202,51 +209,36 @@ class StartggClient implements PlatformClient {
     eventId: EventId,
     opts: { upcomingOnly: boolean },
     signal?: AbortSignal,
-  ): Promise<{
-    page: {
-      data: LiveEventSetsQuery | undefined;
-      error?: ErrorLike;
-    } | null;
-    rateLimit: boolean;
-    aborted: boolean;
-  }> {
+  ) {
     const document = opts.upcomingOnly
       ? LiveEventSetsDocument
       : EventSetsDocument;
-    try {
-      const page = await this.runQuery(
-        document,
-        {
-          eventSlug: eventId.id,
-          page: pageNum,
-          perPage: PER_PAGE,
-        },
-        signal,
-      );
-      return {
-        page: page,
-        rateLimit: false,
-        aborted: false,
-      };
-    } catch (error) {
-      if (ServerError.is(error) && error.statusCode === 429) {
-        return {
-          page: null,
-          rateLimit: true,
-          aborted: false,
-        };
+
+    for (let attempt = 0; attempt < MAX_PAGE_ATTEMPTS; attempt++) {
+      try {
+        await this.scheduler.acquire(signal);
+
+        const response = await this.runQuery(
+          document,
+          { eventSlug: eventId.id, page: pageNum, perPage: PER_PAGE },
+          signal,
+        );
+
+        return response.data;
+      } catch (error) {
+        if (ServerError.is(error) && error.statusCode === 429) {
+          this.scheduler.rateLimitReached(0);
+        } else throw error;
       }
-      if (signal?.aborted) {
-        return {
-          page: null,
-          rateLimit: true,
-          aborted: true,
-        };
-      }
-      throw error;
     }
+
+    return null;
   }
 
+  /**
+   * fetches data for a given page,
+   * returns null if max attempts reached, and data if found
+   */
   private async getPageSets(
     pageNum: number,
     eventId: EventId,
@@ -255,34 +247,18 @@ class StartggClient implements PlatformClient {
   ) {
     const sets: PlatformSet[] = [];
 
-    const maxAttempts = 5;
-    let pageData;
+    const pageData = await this.getPage(pageNum, eventId, opts, signal);
 
-    for (let attemptNum = 0; attemptNum < maxAttempts; attemptNum++) {
-      await this.scheduler.acquire(signal);
+    if (!pageData) return null;
 
-      if (signal?.aborted) return {};
-
-      pageData = await this.getPage(pageNum, eventId, opts, signal);
-
-      if (pageData.page) break;
-
-      if (pageData.rateLimit) this.scheduler.rateLimitReached(0);
-
-      if (pageData.aborted) return {};
-    }
-
-    const totalPages =
-      pageData?.page?.data?.event?.sets?.pageInfo?.totalPages ?? 0;
+    const totalPages = pageData.event?.sets?.pageInfo?.totalPages ?? 0;
 
     const tournamentName =
-      pageData?.page?.data?.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
+      pageData.event?.tournament?.name ?? UNKNOWN_EVENT_NAME;
 
-    for (const node of pageData?.page?.data?.event?.sets?.nodes ?? []) {
+    for (const node of pageData.event?.sets?.nodes ?? []) {
       const mapped = mapSetListNode(node, tournamentName);
-      if (mapped) {
-        sets.push(mapped);
-      }
+      if (mapped) sets.push(mapped);
     }
 
     return {
@@ -292,19 +268,24 @@ class StartggClient implements PlatformClient {
     };
   }
 
-  // work on this later, concurrent tasks is the answer
-  // perhaps add an option to limit to just next phase
   async getSets(
     eventId: EventId,
     opts: { upcomingOnly: boolean },
     onProgress?: (progress: FetchProgress) => void,
   ): Promise<PlatformSet[]> {
     const allSets: PlatformSet[] = [];
-    let eventName = "";
-    let totalPages = 0;
+
+    this.currentAbortController?.abort();
+    this.generation++;
+    const currentGeneration = this.generation;
 
     const abortController = new AbortController();
+    this.currentAbortController = abortController;
+
     StartggClient.abortControllers.add(abortController);
+
+    let eventName = "";
+    let totalPages = 0;
 
     try {
       const firstPageSets = await this.getPageSets(
@@ -314,9 +295,9 @@ class StartggClient implements PlatformClient {
         abortController.signal,
       );
 
-      if (firstPageSets.sets) {
-        allSets.push(...firstPageSets.sets);
-      } else return [];
+      if (this.generation !== currentGeneration || !firstPageSets) return [];
+
+      allSets.push(...firstPageSets.sets);
 
       eventName = firstPageSets.tournamentName;
       totalPages = firstPageSets.totalPages;
@@ -336,12 +317,15 @@ class StartggClient implements PlatformClient {
       let pagesLoaded = 1;
 
       const worker = async () => {
-        while (true) {
-          if (abortController.signal?.aborted) return;
-
+        while (
+          this.generation === currentGeneration &&
+          !abortController.signal.aborted
+        ) {
+          console.log("working!");
           const page = currentPage++;
 
           if (page > totalPages) return;
+
           const pageSets = await this.getPageSets(
             page,
             eventId,
@@ -349,7 +333,7 @@ class StartggClient implements PlatformClient {
             abortController.signal,
           );
 
-          if (pageSets.sets) {
+          if (pageSets && this.generation === currentGeneration) {
             allSets.push(...pageSets.sets);
           } else return;
 
@@ -362,18 +346,38 @@ class StartggClient implements PlatformClient {
             sets: pageSets.sets,
           });
         }
+        console.log("abort caught by worker");
       };
 
       await Promise.all(
         Array.from(
           { length: Math.min(CONCURRENT_WORKERS, totalPages - 1) },
-          () => worker(),
+          () =>
+            worker().catch((error) => {
+              if (isAbortError(error)) {
+                return;
+              }
+              abortController.abort();
+              throw error;
+            }),
         ),
       );
 
-      return allSets;
+      return this.generation === currentGeneration &&
+        !abortController.signal.aborted
+        ? allSets
+        : [];
+    } catch (error) {
+      if (isAbortError(error)) {
+        console.log("abort caught by getSets");
+        return [];
+      }
+      throw error;
     } finally {
       StartggClient.abortControllers.delete(abortController);
+      if (this.currentAbortController === abortController) {
+        this.currentAbortController = null;
+      }
     }
   }
 }
