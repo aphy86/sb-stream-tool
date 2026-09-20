@@ -51,6 +51,7 @@ const EventSets = withForm({
     // actual ui state
     const [tableRows, setTableRows] = useState<SetTableEntry[]>([]);
 
+    // console.log(tableRows);
     const [loading, setLoading] = useState(false);
 
     const timeoutId = useRef<NodeJS.Timeout>(undefined);
@@ -103,10 +104,11 @@ const EventSets = withForm({
 
       if (!flushTimer.current) {
         flushTimer.current = setTimeout(() => {
-          setTableRows((prev) => [...prev, ...pendingRows.current]);
+          const bufferedRows = pendingRows.current;
+          setTableRows((prev) => [...prev, ...bufferedRows]);
           pendingRows.current = [];
           flushTimer.current = undefined;
-        }, 150);
+        }, 200);
       }
     };
 
@@ -114,6 +116,7 @@ const EventSets = withForm({
       const eventId = resolveEventUrl(savedEventUrl);
 
       if (!eventId) return;
+      console.log(loading);
 
       setLoading(true);
 
@@ -141,11 +144,22 @@ const EventSets = withForm({
           )
             return;
 
+          // clear everything first
+          clearTimeout(flushTimer.current);
+          flushTimer.current = undefined;
+          setTournamentName("Unknown Event");
+          setTableRows([]);
+          pendingRows.current = [];
+          setPagesLoaded(0);
+          setTotalPages(0);
+
           getClient(savedApiKey, platformId).abortRequest();
 
           prevEventUrl.current = savedEventUrl;
 
-          fetchSets().catch((reason) => console.log(reason));
+          requestAnimationFrame(() => {
+            fetchSets().catch(console.error);
+          });
         }}
       >
         <SheetTrigger asChild>
@@ -155,7 +169,6 @@ const EventSets = withForm({
           </Button>
         </SheetTrigger>
         <SheetContent
-          forceMount
           side="bottom"
           className="flex flex-col max-h-[85vh] h-full"
         >
