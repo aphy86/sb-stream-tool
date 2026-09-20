@@ -1,5 +1,6 @@
 import {
   EventId,
+  PlatformClient,
   PlatformId,
   TournamentPlatform,
 } from "@renderer/types/platform";
@@ -10,6 +11,8 @@ export const PLATFORMS: TournamentPlatform[] = [
   StartggPlatform,
   ParryggPlatform,
 ];
+
+export const CLIENTS: Map<string, Map<PlatformId, PlatformClient>> = new Map();
 
 export function platformById(id: PlatformId): TournamentPlatform {
   const platform = PLATFORMS.find((candidate) => candidate.id === id);
@@ -37,4 +40,25 @@ export function resolveEventUrl(url: string): EventId | null {
     }
   }
   return null;
+}
+
+export function getClient(apiKey: string, platform: PlatformId) {
+  const client = CLIENTS.get(apiKey)?.get(platform);
+
+  if (client) return client;
+
+  let newClient = platformById(platform).withApiKey(apiKey);
+
+  let platformClients = CLIENTS.get(apiKey);
+
+  if (!platformClients) {
+    platformClients = new Map<PlatformId, PlatformClient>([
+      [platform, newClient],
+    ]);
+    CLIENTS.set(apiKey, platformClients);
+  } else {
+    platformClients.set(platform, newClient);
+  }
+
+  return newClient;
 }

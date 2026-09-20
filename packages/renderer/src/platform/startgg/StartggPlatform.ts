@@ -149,8 +149,8 @@ function mapSetListNode(
   return mapped.entrants.length > 0 ? mapped : null;
 }
 class StartggClient implements PlatformClient {
-  scheduler: RequestScheduler;
-  static abortControllers: Set<AbortController> = new Set();
+  private scheduler: RequestScheduler;
+  private abortControllers: Set<AbortController> = new Set();
 
   private currentAbortController: AbortController | null;
 
@@ -168,7 +168,7 @@ class StartggClient implements PlatformClient {
   }
 
   abortRequest(): void {
-    for (const controller of StartggClient.abortControllers) {
+    for (const controller of this.abortControllers) {
       controller.abort();
     }
   }
@@ -282,7 +282,7 @@ class StartggClient implements PlatformClient {
     const abortController = new AbortController();
     this.currentAbortController = abortController;
 
-    StartggClient.abortControllers.add(abortController);
+    this.abortControllers.add(abortController);
 
     let eventName = "";
     let totalPages = 0;
@@ -321,7 +321,6 @@ class StartggClient implements PlatformClient {
           this.generation === currentGeneration &&
           !abortController.signal.aborted
         ) {
-          console.log("working!");
           const page = currentPage++;
 
           if (page > totalPages) return;
@@ -346,7 +345,6 @@ class StartggClient implements PlatformClient {
             sets: pageSets.sets,
           });
         }
-        console.log("abort caught by worker");
       };
 
       await Promise.all(
@@ -369,12 +367,11 @@ class StartggClient implements PlatformClient {
         : [];
     } catch (error) {
       if (isAbortError(error)) {
-        console.log("abort caught by getSets");
         return [];
       }
       throw error;
     } finally {
-      StartggClient.abortControllers.delete(abortController);
+      this.abortControllers.delete(abortController);
       if (this.currentAbortController === abortController) {
         this.currentAbortController = null;
       }

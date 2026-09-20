@@ -1,5 +1,6 @@
 /**
  * Sliding window rate limiter implementation for requests
+ * If a request is made when the window is full, it's forced to wait for a certain time before it's added back in
  */
 
 export class RequestScheduler {

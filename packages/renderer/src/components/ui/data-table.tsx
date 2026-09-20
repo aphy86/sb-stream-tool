@@ -48,7 +48,7 @@ export const features = tableFeatures({
 
 export const { useAppTable, createAppColumnHelper } = createTableHook({
   features,
-  debugTable: true,
+  debugTable: import.meta.env.MODE === "development",
   enableSortingRemoval: false,
 });
 

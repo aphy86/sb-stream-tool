@@ -1,6 +1,6 @@
 import {
+  getClient,
   getPlatformByEventUrl,
-  platformById,
   resolveEventUrl,
 } from "@renderer/platform/registry";
 import { FetchProgress, PlatformSet } from "@renderer/types/platform";
@@ -62,6 +62,9 @@ const EventSets = withForm({
 
     const [tournamentName, setTournamentName] = useState("Unknown Event");
 
+    const flushTimer = useRef<NodeJS.Timeout>(undefined);
+    const pendingRows = useRef<SetTableEntry[]>([]);
+
     const applySet = () => {
       const selectedSetIndex = parseInt(Object.keys(selectedRow)[0]);
 
@@ -87,16 +90,24 @@ const EventSets = withForm({
     const onFetchProgress = (progress: FetchProgress) => {
       setTotalPages(progress.total);
       setPagesLoaded(progress.loaded);
+      const newRows: SetTableEntry[] = progress.sets.map(mapSetToTableRow);
+
       if (progress.loaded === 1) {
         setTournamentName(progress.tournamentName);
         setsFetched.current = progress.sets;
+        pendingRows.current = newRows;
       } else {
         setsFetched.current.push(...progress.sets);
+        pendingRows.current.push(...newRows);
       }
-      const newRows: SetTableEntry[] = progress.sets.map(mapSetToTableRow);
-      setTableRows((prev) =>
-        progress.loaded === 1 ? newRows : prev.concat(newRows),
-      );
+
+      if (!flushTimer.current) {
+        flushTimer.current = setTimeout(() => {
+          setTableRows((prev) => [...prev, ...pendingRows.current]);
+          pendingRows.current = [];
+          flushTimer.current = undefined;
+        }, 150);
+      }
     };
 
     const fetchSets = async () => {
@@ -106,7 +117,7 @@ const EventSets = withForm({
 
       setLoading(true);
 
-      await platformById(eventId.platform).withApiKey(savedApiKey).getSets(
+      await getClient(savedApiKey, eventId.platform).getSets(
         eventId,
         {
           upcomingOnly: live,
@@ -121,12 +132,16 @@ const EventSets = withForm({
         open={sheetOpen}
         onOpenChange={(open) => {
           setSheetOpen(open);
+          const platformId = resolveEventUrl(savedEventUrl)?.platform;
           if (
             open === false ||
             savedEventSlug === "" ||
-            prevEventUrl.current === savedEventUrl
+            prevEventUrl.current === savedEventUrl ||
+            !platformId
           )
             return;
+
+          getClient(savedApiKey, platformId).abortRequest();
 
           prevEventUrl.current = savedEventUrl;
 
@@ -140,6 +155,7 @@ const EventSets = withForm({
           </Button>
         </SheetTrigger>
         <SheetContent
+          forceMount
           side="bottom"
           className="flex flex-col max-h-[85vh] h-full"
         >
