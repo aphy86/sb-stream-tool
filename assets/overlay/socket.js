@@ -1,10 +1,10 @@
 const socket = io("http://127.0.0.1:20242/");
 
 const portToNum = {
-  Red: 0,
-  Blue: 1,
-  Green: 2,
-  Yellow: 3,
+  0: "Red",
+  1: "Blue",
+  2: "Green",
+  3: "Yellow",
 };
 
 const portToImg = {
@@ -13,22 +13,6 @@ const portToImg = {
   Green: "ports/port3.svg",
   Yellow: "ports/port4.svg",
 };
-const NAME_MAX_SIZE = 40; // px, matches .playername in overlay.css
-const NAME_MIN_SIZE = 16; // px, don't shrink past this
-const NAME_STEP = 1; // px per iteration
-
-function fit(el) {
-  el.style.fontSize = `${NAME_MAX_SIZE}px`; // reset before measuring
-
-  let size = NAME_MAX_SIZE;
-  while (
-    size > NAME_MIN_SIZE &&
-    (el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight)
-  ) {
-    size -= NAME_STEP;
-    el.style.fontSize = `${size}px`;
-  }
-}
 
 function setElementData(id, data) {
   if (
@@ -39,8 +23,8 @@ function setElementData(id, data) {
     return;
   }
 
-  const el = (document.getElementById(id).innerText = data);
-  fit(el);
+  document.getElementById(id).innerText = data;
+  // fit(el);
 }
 
 function getPlayerNames(players, inLosers) {
@@ -70,8 +54,8 @@ function getPort(nodes, players) {
     nodes[j].src = "./ports/noport.svg";
   }
   for (let i = 0; i < players.length; i++) {
-    nodes[portToNum[players[i].gameInfo.port]].src =
-      portToImg[players[i].gameInfo.port];
+    nodes[players[i].gameInfo.port - 1].src =
+      portToImg[portToNum[players[i].gameInfo.port - 1]];
   }
 }
 
@@ -189,5 +173,5 @@ function updateOverlay(newData) {
 
 socket.on("sendDataToClients", (newData) => {
   updateOverlay(newData);
-  socket.broadcast.emit("overlayUpdateSuccess");
+  socket.emit("overlayUpdateSuccess");
 });

@@ -46,18 +46,19 @@ export class SocketioServer {
       socket.on("overlayUpdateSuccess", () => {
         EventStream.notify(
           "toast",
+          "Connected",
           `Overlay ${this.sockets.get(socket.id)} updated set information successfully!`,
         );
       });
 
       socket.on("disconnect", () => {
-        this.sockets.delete(socket.id);
         EventStream.notify(
           "toast",
           "Disconnect",
           `Overlay ${this.sockets.get(socket.id)} disconnected`,
         );
         console.log(`User ${socket.id} disconnected, goodby`);
+        this.sockets.delete(socket.id);
       });
     });
   }
