@@ -13,7 +13,7 @@ export class RequestScheduler {
   private totalRateLimitsHit = 0;
 
   constructor(
-    private readonly maxRequests: number,
+    private maxRequests: number,
     private readonly windowMs: number,
   ) {}
 
@@ -80,6 +80,11 @@ export class RequestScheduler {
       retryMs > 0
         ? retryMs + Math.random() * 1000
         : this.windowMs + Math.random() * 2000;
+
+    // if you hit the rate limit before the max request limit, shrink the max request limit to the current amount of requests called + 1
+    if (this.maxRequests > this.requestTimes.length) {
+      this.maxRequests = this.requestTimes.length + 1;
+    }
 
     this.blockedUntil = Math.max(this.blockedUntil, now + delay);
   }

@@ -141,11 +141,6 @@ export function DataTable<TData extends RowData>({
                     key={row.id}
                     data-index={virtualRow.index}
                     data-state={row.getIsSelected() && "selected"}
-                    ref={(node) => {
-                      if (node) {
-                        rowVirtualizer.measureElement(node);
-                      }
-                    }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>

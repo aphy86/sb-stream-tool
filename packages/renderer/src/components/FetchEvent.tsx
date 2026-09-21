@@ -15,8 +15,8 @@ import {
 } from "./ui/sheet";
 import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
 import {
+  getClient,
   getPlatformByEventUrl,
-  platformById,
   resolveEventUrl,
 } from "@renderer/platform/registry";
 
@@ -57,9 +57,7 @@ function FetchEvent() {
             onClick={() => {
               const oldEventId = resolveEventUrl(savedEventUrl);
               if (oldEventId) {
-                platformById(oldEventId.platform)
-                  .withApiKey(savedApiKey)
-                  .abortRequest();
+                getClient(savedApiKey, oldEventId.platform).abortRequest();
               }
               const eventId = resolveEventUrl(eventUrl);
               if (eventId === null) {

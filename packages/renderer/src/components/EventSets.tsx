@@ -3,9 +3,8 @@ import {
   getPlatformByEventUrl,
   resolveEventUrl,
 } from "@renderer/platform/registry";
-import { FetchProgress, PlatformSet } from "@renderer/types/platform";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { mapSetToTableRow, setFieldValues } from "@renderer/utils/helpers";
+import { setFieldValues } from "@renderer/utils/helpers";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { useCreateAtom, useSelector } from "@tanstack/react-store";
 import { RowSelectionState } from "@tanstack/react-table";
@@ -24,7 +23,8 @@ import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
 import { DataTable } from "./ui/data-table";
 import { columns } from "@renderer/types/columns";
-import { SetTableEntry } from "@renderer/types/tournament";
+import { useEventSetsStore } from "@renderer/hooks/use-event-sets-store";
+import { eventSetsStore, fetchEventSets } from "@renderer/lib/EventSetsStore";
 
 const EventSets = withForm({
   defaultValues: MatchDefaultValues,
@@ -32,52 +32,39 @@ const EventSets = withForm({
     live: false,
   },
   render: function EventSetsSection({ form, live }) {
+    const eventSetsStoreKey = live ? "live" : "not-live";
     const savedEventSlug = useSettingsStore((state) => state.eventSlug);
     const savedEventUrl = useSettingsStore((state) => state.eventUrl);
     const savedApiKey = useSettingsStore(
       (state) =>
         state.credentials[getPlatformByEventUrl(savedEventUrl).id] ?? "",
     );
-
-    const prevEventUrl = useRef("");
-
     const [statusMessage, setStatusMessage] = useState("");
 
     const [sheetOpen, setSheetOpen] = useState(false);
-
-    // not ui state, just purely for table + form referencing purposes
-    const setsFetched = useRef<PlatformSet[]>([]);
-
-    // actual ui state
-    const [tableRows, setTableRows] = useState<SetTableEntry[]>([]);
-
-    // console.log(tableRows);
-    const [loading, setLoading] = useState(false);
 
     const timeoutId = useRef<NodeJS.Timeout>(undefined);
     const rowSelectionAtom = useCreateAtom<RowSelectionState>({});
     const selectedRow = useSelector(rowSelectionAtom);
 
-    const [totalPages, setTotalPages] = useState(0);
-    const [pagesLoaded, setPagesLoaded] = useState(0);
-
-    const [tournamentName, setTournamentName] = useState("Unknown Event");
-
-    const flushTimer = useRef<NodeJS.Timeout>(undefined);
-    const pendingRows = useRef<SetTableEntry[]>([]);
+    const {
+      tournamentName,
+      sets,
+      tableRows,
+      totalPages,
+      pagesLoaded,
+      loading,
+    } = useEventSetsStore(eventSetsStoreKey);
 
     const applySet = () => {
       const selectedSetIndex = parseInt(Object.keys(selectedRow)[0]);
 
-      if (
-        Number.isNaN(selectedSetIndex) ||
-        selectedSetIndex > setsFetched.current.length
-      )
+      if (Number.isNaN(selectedSetIndex) || selectedSetIndex > sets.length)
         return;
 
       setStatusMessage(`Applying set ${selectedSetIndex}...`);
 
-      setFieldValues(form, setsFetched.current[selectedSetIndex]);
+      setFieldValues(form, sets[selectedSetIndex]);
 
       setStatusMessage(`Applied set ${selectedSetIndex}!`);
 
@@ -88,77 +75,29 @@ const EventSets = withForm({
       }, 2000);
     };
 
-    const onFetchProgress = (progress: FetchProgress) => {
-      setTotalPages(progress.total);
-      setPagesLoaded(progress.loaded);
-      const newRows: SetTableEntry[] = progress.sets.map(mapSetToTableRow);
-
-      if (progress.loaded === 1) {
-        setTournamentName(progress.tournamentName);
-        setsFetched.current = progress.sets;
-        pendingRows.current = newRows;
-      } else {
-        setsFetched.current.push(...progress.sets);
-        pendingRows.current.push(...newRows);
-      }
-
-      if (!flushTimer.current) {
-        flushTimer.current = setTimeout(() => {
-          const bufferedRows = pendingRows.current;
-          setTableRows((prev) => [...prev, ...bufferedRows]);
-          pendingRows.current = [];
-          flushTimer.current = undefined;
-        }, 200);
-      }
-    };
-
-    const fetchSets = async () => {
-      const eventId = resolveEventUrl(savedEventUrl);
-
-      if (!eventId) return;
-      console.log(loading);
-
-      setLoading(true);
-
-      await getClient(savedApiKey, eventId.platform).getSets(
-        eventId,
-        {
-          upcomingOnly: live,
-        },
-        onFetchProgress,
-      );
-
-      setLoading(false);
-    };
     return (
       <Sheet
         open={sheetOpen}
         onOpenChange={(open) => {
           setSheetOpen(open);
-          const platformId = resolveEventUrl(savedEventUrl)?.platform;
-          if (
-            open === false ||
-            savedEventSlug === "" ||
-            prevEventUrl.current === savedEventUrl ||
-            !platformId
-          )
-            return;
+          const platformId = resolveEventUrl(savedEventUrl);
+          if (open === false || savedEventSlug === "" || !platformId) return;
 
-          // clear everything first
-          clearTimeout(flushTimer.current);
-          flushTimer.current = undefined;
-          setTournamentName("Unknown Event");
-          setTableRows([]);
-          pendingRows.current = [];
-          setPagesLoaded(0);
-          setTotalPages(0);
+          const current = eventSetsStore.getSnapshot(eventSetsStoreKey);
+          if (current.loading) return;
 
-          getClient(savedApiKey, platformId).abortRequest();
-
-          prevEventUrl.current = savedEventUrl;
+          getClient(savedApiKey, platformId.platform).abortRequest();
 
           requestAnimationFrame(() => {
-            fetchSets().catch(console.error);
+            fetchEventSets(
+              eventSetsStoreKey,
+              savedApiKey,
+              platformId.platform,
+              platformId,
+              {
+                upcomingOnly: live,
+              },
+            ).catch(console.error);
           });
         }}
       >
