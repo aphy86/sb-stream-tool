@@ -10,7 +10,7 @@ import {
   ShortcutSettings,
   SlippiRelayConfig,
   SlippiRelaySettings,
-  Tournament,
+  Match,
 } from "@app/common";
 import { dialog, shell } from "electron";
 import { SettingsStore } from "./components/SettingsStore.js";
@@ -38,7 +38,7 @@ export function createHandlers(
       ObsController.updateScenes(gameStartScenes, gameEndScenes, setEndScenes);
     },
 
-    "overlay/update": (newData: Tournament) => {
+    "overlay/update": (newData: Match) => {
       mainSocket.emit("sendDataToServer", newData);
       FileHandler.writeData(newData);
     },

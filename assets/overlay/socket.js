@@ -13,6 +13,22 @@ const portToImg = {
   Green: "ports/port3.svg",
   Yellow: "ports/port4.svg",
 };
+const NAME_MAX_SIZE = 40; // px, matches .playername in overlay.css
+const NAME_MIN_SIZE = 16; // px, don't shrink past this
+const NAME_STEP = 1; // px per iteration
+
+function fit(el) {
+  el.style.fontSize = `${NAME_MAX_SIZE}px`; // reset before measuring
+
+  let size = NAME_MAX_SIZE;
+  while (
+    size > NAME_MIN_SIZE &&
+    (el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight)
+  ) {
+    size -= NAME_STEP;
+    el.style.fontSize = `${size}px`;
+  }
+}
 
 function setElementData(id, data) {
   if (
@@ -23,7 +39,8 @@ function setElementData(id, data) {
     return;
   }
 
-  document.getElementById(id).innerText = data;
+  const el = (document.getElementById(id).innerText = data);
+  fit(el);
 }
 
 function getPlayerNames(players, inLosers) {
