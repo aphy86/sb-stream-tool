@@ -38,7 +38,7 @@ const UNKNOWN_ROUND_NAME = "Custom Round Name";
 const MAX_PAGE_ATTEMPTS = 5;
 
 const EVENT_URL_PATTERN =
-  /^https:\/\/(?:www\.)?start\.gg\/tournament\/([^\/?#]+)\/event\/([^\/?#]+)(?:[\/?#].*)?$/;
+  /^https:\/\/(?:www\.)?start\.gg\/tournament\/([^/?#]+)\/event\/([^/?#]+)(?:[/?#].*)?$/;
 
 type StartggParticipant = {
   prefix?: string | null;

@@ -32,7 +32,7 @@ const EventSets = withForm({
     live: false,
   },
   render: function EventSetsSection({ form, live }) {
-    const eventSetsStoreKey = live ? "live" : "not-live";
+    const eventSetsStoreKey = "event-sets";
     const savedEventSlug = useSettingsStore((state) => state.eventSlug);
     const savedEventUrl = useSettingsStore((state) => state.eventUrl);
     const savedApiKey = useSettingsStore(
@@ -46,6 +46,7 @@ const EventSets = withForm({
     const timeoutId = useRef<NodeJS.Timeout>(undefined);
     const rowSelectionAtom = useCreateAtom<RowSelectionState>({});
     const selectedRow = useSelector(rowSelectionAtom);
+    const timeSince = useRef(0);
 
     const {
       tournamentName,
@@ -84,8 +85,10 @@ const EventSets = withForm({
           if (open === false || savedEventSlug === "" || !platformId) return;
 
           const current = eventSetsStore.getSnapshot(eventSetsStoreKey);
-          if (current.loading) return;
+          const timeNow = Date.now();
+          if (current.loading || timeNow - timeSince.current <= 120000) return;
 
+          timeSince.current = timeNow;
           getClient(savedApiKey, platformId.platform).abortRequest();
 
           requestAnimationFrame(() => {

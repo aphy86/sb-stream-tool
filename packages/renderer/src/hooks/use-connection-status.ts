@@ -11,5 +11,5 @@ export function useConnectionStatus() {
     onConnectionStatusChange((type, status) => {
       updateStatus(type, status);
     });
-  }, []);
+  }, [updateStatus]);
 }

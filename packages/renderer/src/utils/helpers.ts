@@ -3,6 +3,7 @@ import {
   Match,
   Placement,
   placements,
+  Player,
   Team,
   type SlippiPlayer,
 } from "@app/common";
@@ -59,7 +60,7 @@ export const ActionToName: Record<Action, string> = {
 
 export const onSubmit = (data: Match) => {
   console.log(data);
-  updateOverlay(data).catch((error) => console.log(error));
+  updateOverlay(data).catch(console.error);
 };
 
 // export const getBorderColor = (setFormat: SetFormat)
@@ -207,71 +208,6 @@ export function filterSets(
   return filteredSets;
 }
 
-// // updates the player form for doubles or singles
-// export function updatePlayerForm(
-//   setFormat: SetFormat,
-//   currentSetFormat: SetFormat,
-//   teams: UseFieldArrayReturn[]
-// ): void {
-//   if (setFormat !== currentSetFormat) {
-//     changeSetFormat(setFormat, teams)
-//   }
-// }
-
-// export function getSetFormat(
-//   numPlayersInForm: number | undefined,
-//   numPlayersInSet: number | undefined,
-// ): SetFormat {
-//   const numPlayersToSetFormat: Record<number, SetFormat> = {
-//     1: "Singles",
-//     2: "Doubles",
-//   };
-//   if (
-//     !numPlayersInForm ||
-//     !numPlayersInSet ||
-//     numPlayersInForm > numPlayersInSet
-//   ) {
-//     return "Singles";
-//   }
-//   if (numPlayersInForm === numPlayersInSet) {
-//     return numPlayersToSetFormat[numPlayersInSet];
-//   }
-//   return "Doubles";
-// }
-// export function changeSetFormat(
-//   setFormat: string,
-//   teams: UseFieldArrayReturn[],
-// ): void {
-//   switch (setFormat) {
-//     case "Singles":
-//       for (let i = 0; i < teams.length; i++) {
-//         teams[i].remove(1);
-//       }
-//       break;
-//     case "Doubles":
-//       for (let i = 0; i < teams.length; i++) {
-//         if (teams[i].fields.length < 2) {
-//           teams[i].append({
-//             playerInfo: {
-//               teamName: "",
-//               playerTag: "",
-//               pronouns: "",
-//               twitter: "",
-//             },
-//             gameInfo: {
-//               character: "Random",
-//               altCostume: "Default",
-//               port: 2 + i,
-//             },
-//           });
-//         }
-//       }
-//       break;
-//     default:
-//       throw new Error(`Set format ${setFormat} does not exist!`);
-//   }
-// }
-
 export function findTeamWinner(
   players: SlippiPlayer[][],
   winner: number,
@@ -322,6 +258,34 @@ export function parseMatchName(matchName: string): {
     round: null,
     customMatchName: matchName,
   };
+}
+
+export function swapCharacters(form: any, start: number, end: number) {
+  const teamsLength = form.getFieldValue("teams").length - 1;
+  if (start < 0 || end > teamsLength) return;
+  const teamStartGameInfo = form
+    .getFieldValue(`teams[${start}].players`)
+    .map((player: Player) => player.gameInfo);
+  const teamEndGameInfo = form
+    .getFieldValue(`teams[${end}].players`)
+    .map((player: Player) => player.gameInfo);
+
+  for (let i = 0; i < teamEndGameInfo.length; i++) {
+    if (i < form.getFieldValue(`teams[${start}].players`).length) {
+      form.setFieldValue(
+        `teams[${start}].players[${i}].gameInfo`,
+        teamEndGameInfo[i],
+      );
+    }
+  }
+  for (let j = 0; j < teamStartGameInfo.length; j++) {
+    if (j < form.getFieldValue(`teams[${start}].players`).length) {
+      form.setFieldValue(
+        `teams[${end}].players[${j}].gameInfo`,
+        teamStartGameInfo[j],
+      );
+    }
+  }
 }
 
 // tanstack form typing moment lol

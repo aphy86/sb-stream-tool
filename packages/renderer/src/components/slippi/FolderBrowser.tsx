@@ -41,7 +41,7 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
           Note: This option is for those who are connecting to the console via
           Slippi Launcher, etc
         </h2>
-        <h3>Connection status: {connectionStatus}</h3>
+        <h3 className="text-center">Connection status: {connectionStatus}</h3>
       </div>
       <div className="flex flex-col gap-4 w-full">
         <div className="flex flex-col gap-2">

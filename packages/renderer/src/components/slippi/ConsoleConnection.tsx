@@ -55,7 +55,7 @@ function ConsoleConnection() {
           Note: You must have launched Slippi Melee in order to connect! (and
           ensure the slippi networking feature is on)
         </h2>
-        <h3>Connection Status: {connectionStatus}</h3>
+        <h3 className="text-center">Connection Status: {connectionStatus}</h3>
       </div>
       <div className="flex gap-2">
         <div className="flex flex-col gap-1">

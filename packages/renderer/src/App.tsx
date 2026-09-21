@@ -12,13 +12,13 @@ import Slippi from "./components/slippi/Slippi";
 import Shortcuts from "./components/settings/shortcuts/Shortcuts";
 import GlobalHotkeys from "./components/GlobalHotkeys";
 import { MatchSchema } from "./types/MatchSchema";
-// import { onSubmit } from "./utils/helpers";
+import { onSubmit } from "./utils/helpers";
 function App() {
   const form = useAppForm({
     defaultValues: MatchDefaultValues,
     onSubmit: async ({ value }) => {
       console.log(value);
-      // onSubmit(value);
+      onSubmit(value);
     },
     validators: {
       onChange: MatchSchema,

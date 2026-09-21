@@ -10,12 +10,14 @@ export type SlippiRelaySlice = {
   slippiWiiRelayPort: number;
   slippiDolphinRelayIp: string;
   slippiDolphinRelayPort: number;
+  slippiReversedOrder: boolean;
   slippiRelayAutoupdate: boolean;
   updateSlippiRelayStatus: (newRelayStatus: SlippiRelayStatus) => void;
   updateSlippiRelayDirectory: (newDirectory: string) => void;
   updateSlippiWiiRelayConnection: (newIp: string, newPort: number) => void;
   updateSlippiDolphinRelayConnection: (newIp: string, newPort: number) => void;
   updateSlippiRelayAutoupdate: (autoUpdate: boolean) => void;
+  updateSlippiReversedOrder: (reverse: boolean) => void;
   writeSlippiRelaySettingsToFile: (
     settings: Partial<SlippiRelaySettings>,
   ) => void;
@@ -35,6 +37,7 @@ export const createSlippiRelaySlice: StateCreator<
   slippiDolphinRelayIp: "",
   slippiDolphinRelayPort: 0,
   slippiRelayAutoupdate: true,
+  slippiReversedOrder: false,
   updateSlippiRelayDirectory: (newDirectory: string) => {
     set((state) => {
       state.slippiRelayDirectory = newDirectory;
@@ -43,6 +46,11 @@ export const createSlippiRelaySlice: StateCreator<
   updateSlippiRelayAutoupdate: (autoUpdate) => {
     set((state) => {
       state.slippiRelayAutoupdate = autoUpdate;
+    });
+  },
+  updateSlippiReversedOrder: (reverse) => {
+    set((state) => {
+      state.slippiReversedOrder = reverse;
     });
   },
   updateSlippiWiiRelayConnection: (newIp, newPort) => {

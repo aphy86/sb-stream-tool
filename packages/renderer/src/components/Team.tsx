@@ -15,22 +15,100 @@ import { Button } from "./ui/button";
 import { Toggle } from "./ui/toggle";
 import { Badge } from "lucide-react";
 import Player from "./Player";
-
+import { useRef } from "react";
+import { useSettingsStore } from "@renderer/zustand/store";
+import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
+import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { getValueWithinRange } from "@renderer/utils/helpers";
 const Team = withForm({
   defaultValues: MatchDefaultValues,
   props: {
     teamNumber: 0,
   },
   render: function TeamSection({ form, teamNumber }) {
-    // const max = 100;
-    // const min = 0;
+    const max = 100;
+    const min = 0;
     const gameProfile = useGameProfile();
     const setFormat = useSelector(
       form.store,
       (state) => state.values.setFormat,
     );
+    const teamPanelRef = useRef<HTMLDivElement>(null);
+
+    const scoreIncreaseHotkey =
+      useSettingsStore((state) => state.shortcuts.get("score-up")) ??
+      (defaultShortcuts.get("score-up") as Hotkey);
+
+    const scoreDecreaseHotkey =
+      useSettingsStore((state) => state.shortcuts.get("score-down")) ??
+      (defaultShortcuts.get("score-down") as Hotkey);
+
+    const leftUp = useSettingsStore((state) =>
+      state.shortcuts.get("team-left-score-up"),
+    );
+    const leftDown = useSettingsStore((state) =>
+      state.shortcuts.get("team-left-score-down"),
+    );
+    const rightUp = useSettingsStore((state) =>
+      state.shortcuts.get("team-right-score-up"),
+    );
+    const rightDown = useSettingsStore((state) =>
+      state.shortcuts.get("team-right-score-down"),
+    );
+
+    const increaseScore = () => {
+      form.setFieldValue(
+        `teams[${teamNumber}].score`,
+        getValueWithinRange(
+          form.getFieldValue(`teams[${teamNumber}].score`) + 1,
+          max,
+          min,
+        ),
+      );
+    };
+
+    const decreaseScore = () => {
+      form.setFieldValue(
+        `teams[${teamNumber}].score`,
+        getValueWithinRange(
+          form.getFieldValue(`teams[${teamNumber}].score`) - 1,
+          max,
+          min,
+        ),
+      );
+    };
+    useHotkey(scoreDecreaseHotkey, decreaseScore, {
+      target: teamPanelRef,
+    });
+
+    useHotkey(scoreIncreaseHotkey, increaseScore, { target: teamPanelRef });
+
+    const getKeys = () => {
+      if (teamNumber === 0) {
+        return {
+          teamIncreaseKey:
+            leftUp ?? (defaultShortcuts.get("team-left-score-up") as Hotkey),
+          teamDecreaseKey:
+            leftDown ??
+            (defaultShortcuts.get("team-left-score-down") as Hotkey),
+        };
+      }
+      return {
+        teamIncreaseKey:
+          rightUp ?? (defaultShortcuts.get("team-right-score-up") as Hotkey),
+        teamDecreaseKey:
+          rightDown ??
+          (defaultShortcuts.get("team-right-score-down") as Hotkey),
+      };
+    };
+
+    const { teamIncreaseKey, teamDecreaseKey } = getKeys();
+
+    useHotkey(teamIncreaseKey, () => increaseScore());
+    useHotkey(teamDecreaseKey, () => decreaseScore());
+
     return (
-      <div tabIndex={-1} className="w-full">
+      <div tabIndex={-1} ref={teamPanelRef} className="w-full">
         <div className="flex flex-col gap-0.5">
           <form.Field name={`teams[${teamNumber}].name`}>
             {(field) => {

@@ -12,6 +12,8 @@ import Teams from "./Teams";
 import FetchSet from "./FetchSet";
 import FetchEvent from "./FetchEvent";
 import EventSets from "./EventSets";
+import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
+import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
 
 const Match = withForm({
   defaultValues: MatchDefaultValues,
@@ -23,6 +25,13 @@ const Match = withForm({
       (state) => state.credentials[platform.id] ?? "",
     );
     const matchScreenRef = useRef<HTMLDivElement>(null);
+    const submitHotkey =
+      useSettingsStore((state) => state.shortcuts.get("submit")) ??
+      (defaultShortcuts.get("submit") as Hotkey);
+
+    useHotkey(submitHotkey, () => form.handleSubmit(), {
+      target: matchScreenRef,
+    });
 
     return (
       <div ref={matchScreenRef} className="flex flex-col gap-2">

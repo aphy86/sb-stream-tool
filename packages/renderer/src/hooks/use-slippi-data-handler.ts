@@ -32,6 +32,9 @@ export function useSlippiDataHandler() {
   const slippiRelayAutoUpdate = useSettingsStore(
     (state) => state.slippiRelayAutoupdate,
   );
+  const slippiRelayReversedOrder = useSettingsStore(
+    (state) => state.slippiReversedOrder,
+  );
 
   useEffect(() => {
     const hasSetEnded = () => {
@@ -64,20 +67,23 @@ export function useSlippiDataHandler() {
           }
         }
 
+        let playerInfo = data.players;
+        if (slippiRelayReversedOrder) playerInfo = data.players.reverse();
+
         for (let i = 0; i < form.getFieldValue("teams").length; i++) {
           for (
             let j = 0;
             j <
             Math.min(
               form.getFieldValue(`teams[${i}].players`).length,
-              data.players[i].length, // you can have 1 player on one team and 3 players on another, can't handle that right now in frontend, will do in a future update
+              playerInfo[i].length, // you can have 1 player on one team and 3 players on another, can't handle that right now in frontend, will do in a future update
             );
             j++
           ) {
             form.setFieldValue(`teams[${i}].players[${j}].gameInfo`, {
-              character: data.players[i][j].character,
-              altCostume: data.players[i][j].color,
-              port: data.players[i][j].port,
+              character: playerInfo[i][j].character,
+              altCostume: playerInfo[i][j].color,
+              port: playerInfo[i][j].port,
             });
           }
         }
@@ -90,7 +96,12 @@ export function useSlippiDataHandler() {
       }
     });
     return () => clearAllListeners("slippi:new-game-start-data");
-  }, [slippiRelayStatus]);
+  }, [
+    slippiRelayStatus,
+    slippiRelayAutoUpdate,
+    slippiRelayReversedOrder,
+    form,
+  ]);
 
   useEffect(() => {
     onNewSlippiGameEndData((winner) => {
@@ -118,5 +129,5 @@ export function useSlippiDataHandler() {
       }
     });
     return () => clearAllListeners("slippi:new-game-end-data");
-  }, [slippiRelayStatus]);
+  }, [slippiRelayStatus, slippiRelayAutoUpdate, form]);
 }
