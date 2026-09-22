@@ -1,19 +1,24 @@
 import { useSettingsStore } from "@renderer/zustand/store";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Alert, AlertTitle } from "./ui/alert";
 import { AlertCircleIcon } from "lucide-react";
-import { Button } from "./ui/button";
 import { getPlatformByEventUrl } from "@renderer/platform/registry";
 import { useRef } from "react";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import Header from "./Header";
-import Commentators from "./Commentators";
-import Teams from "./Teams";
-import FetchSet from "./FetchSet";
-import FetchEvent from "./FetchEvent";
-import EventSets from "./EventSets";
 import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
 import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
+import FetchEvent from "./sets/FetchEvent";
+import Header from "./Header";
+import Teams from "./Teams";
+import Commentators from "./Commentators";
+import EventSets from "./sets/EventSets";
+import FetchSet from "./sets/FetchSet";
+import { Alert, AlertTitle } from "@renderer/components/ui/alert";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@renderer/components/ui/tabs";
+import { Button } from "@renderer/components/ui/button";
 
 const Match = withForm({
   defaultValues: MatchDefaultValues,

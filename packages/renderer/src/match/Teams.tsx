@@ -1,13 +1,14 @@
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { Button } from "./ui/button";
+import { Button } from "../components/ui/button";
 import Team from "./Team";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { Badge } from "lucide-react";
-import { Toggle } from "./ui/toggle";
-import { swapCharacters } from "@renderer/utils/helpers";
+import { Toggle } from "../components/ui/toggle";
+
 import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
 import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { useRef } from "react";
+import { swapCharacters } from "./helpers";
 
 const Teams = withForm({
   defaultValues: MatchDefaultValues,

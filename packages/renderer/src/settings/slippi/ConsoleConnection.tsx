@@ -1,11 +1,11 @@
 import { send } from "@app/preload";
-import { Button } from "../ui/button";
 import { SlippiRelayConfig } from "@app/common";
 import { useState } from "react";
 import { useSettingsStore } from "@renderer/zustand/store";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { sendToastMessage } from "../ui/toast";
+import { sendToastMessage } from "@renderer/components/ui/toast";
+import { Label } from "@renderer/components/ui/label";
+import { Input } from "@renderer/components/ui/input";
+import { Button } from "@renderer/components/ui/button";
 
 function ConsoleConnection() {
   const savedIp = useSettingsStore((state) => state.slippiWiiRelayIp);

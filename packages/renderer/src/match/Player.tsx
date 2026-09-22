@@ -2,17 +2,17 @@ import { useGameProfile } from "@renderer/hooks/use-game-profile";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
 import { useSelector } from "@tanstack/react-form";
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
+import { Button } from "../components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "../components/ui/field";
+import { Input } from "../components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+} from "../components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { ChevronsUpDown, Minus, Plus } from "lucide-react";
 import {
   Command,
@@ -20,7 +20,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "./ui/command";
+} from "../components/ui/command";
 import { meleeAltCostumes, MeleeCharacter, meleeCharacters } from "@app/common";
 import { tailwindTeamBorderColorLookup } from "@renderer/utils/helpers";
 
@@ -309,6 +309,7 @@ const Player = withForm({
               name={`teams[${teamNumber}].players[${playerNumber}].gameInfo.character`}
               listeners={{
                 onChange: () => {
+                  console.log("onChange");
                   form.resetField(
                     `teams[${teamNumber}].players[${playerNumber}].gameInfo.altCostume`,
                   );

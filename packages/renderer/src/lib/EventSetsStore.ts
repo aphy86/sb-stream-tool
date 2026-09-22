@@ -5,8 +5,7 @@ import {
   PlatformId,
   PlatformSet,
 } from "@renderer/types/platform";
-import { SetTableEntry } from "@renderer/types/tournament";
-import { mapSetToTableRow } from "@renderer/utils/helpers";
+import { SetTableEntry } from "@renderer/types/event-sets";
 
 export type EventSetsState = {
   tournamentName: string;
@@ -73,6 +72,14 @@ class EventSetsStore {
     this.notify(key);
   }
 
+  private mapSetToTableRow(set: PlatformSet): SetTableEntry {
+    return {
+      stream: set.stream,
+      matchName: set.matchName,
+      firstGroupName: set.entrants[0].name,
+      secondGroupName: set.entrants[1].name,
+    };
+  }
   reset(key: string) {
     clearTimeout(this.flushTimers.get(key));
     this.flushTimers.delete(key);
@@ -87,7 +94,7 @@ class EventSetsStore {
 
   onProgress(key: string, progress: FetchProgress) {
     const current = this.states.get(key) ?? EMPTY_STATE;
-    const newRows = progress.sets.map(mapSetToTableRow);
+    const newRows = progress.sets.map(this.mapSetToTableRow);
 
     const nextSets =
       progress.loaded === 1

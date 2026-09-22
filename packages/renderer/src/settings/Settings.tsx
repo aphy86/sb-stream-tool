@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
-import { SidebarProvider, SidebarTrigger } from "../ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
 import SettingsSidebar from "./SettingsSidebar";
-import { Button } from "../ui/button";
+import { Button } from "../components/ui/button";
 import { X } from "lucide-react";
 import { ReactNode } from "react";
 import { useHotkey } from "@tanstack/react-hotkeys";

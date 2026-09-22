@@ -1,2 +1,71 @@
-export * from "./match.js";
-export * from "./game/index.js";
+export type SocialMediaAccount = {
+  platform: string;
+  username: string;
+};
+
+export type SetFormat = "Singles" | "Doubles";
+
+export type PlayerInfo = {
+  teamName: string;
+  playerTag: string;
+  pronouns: string;
+  socials: SocialMediaAccount[];
+};
+
+export type Player = {
+  playerInfo: PlayerInfo;
+  gameInfo: GameInfo;
+};
+
+export type Team = {
+  name: string;
+  score: number;
+  inLosers: boolean;
+  players: Player[];
+  color?: string;
+};
+
+export type Commentator = {
+  name: string;
+  socials: SocialMediaAccount[];
+  pronouns: string;
+};
+
+export type GameInfo = {
+  character: string;
+  altCostume: string;
+  port: number;
+};
+
+export type Match = {
+  tournamentName: string;
+  bestOf: number;
+  roundFormat: string;
+  customRoundFormat: string;
+  roundNumber?: string;
+  setFormat: string;
+  teams: Team[];
+  commentators: Commentator[];
+};
+
+export type RoundType =
+  | "Friendlies"
+  | "Exhibition Match"
+  | "Money Match"
+  | "Losers Round"
+  | "Winners Round"
+  | "Winners Quarter-Final"
+  | "Winners Semi-Final"
+  | "Winners Final"
+  | "Losers Quarter-Final"
+  | "Losers Semi-Final"
+  | "Losers Final"
+  | "Grand Final"
+  | "Grand Finals Reset"
+  | "Custom Match";
+
+export type AltCostumeEntry = {
+  characterName: string;
+  numberOfCostumes: number;
+  colors: string[];
+};

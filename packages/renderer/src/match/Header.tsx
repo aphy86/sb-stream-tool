@@ -1,15 +1,15 @@
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
-import { Spinbox } from "./ui/spinbox";
+import { roundTypes, setFormats } from "@app/common";
+import { Field, FieldGroup, FieldLabel } from "@renderer/components/ui/field";
+import { Input } from "@renderer/components/ui/input";
+import { Spinbox } from "@renderer/components/ui/spinbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
-import { placements, setFormats } from "@app/common";
+} from "@renderer/components/ui/select";
 
 const Header = withForm({
   defaultValues: MatchDefaultValues,
@@ -86,9 +86,9 @@ const Header = withForm({
                         <SelectValue></SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {placements.map((placement) => (
-                          <SelectItem key={placement} value={placement}>
-                            {placement}
+                        {roundTypes.map((roundType) => (
+                          <SelectItem key={roundType} value={roundType}>
+                            {roundType}
                           </SelectItem>
                         ))}
                       </SelectContent>

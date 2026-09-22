@@ -1,7 +1,7 @@
 import { useGameProfile } from "@renderer/hooks/use-game-profile";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { Field, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
+import { Field, FieldLabel } from "../components/ui/field";
+import { Input } from "../components/ui/input";
 import { useSelector } from "@tanstack/react-form";
 import {
   Select,
@@ -9,10 +9,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
-import { Spinbox } from "./ui/spinbox";
-import { Button } from "./ui/button";
-import { Toggle } from "./ui/toggle";
+} from "../components/ui/select";
+import { Spinbox } from "../components/ui/spinbox";
+import { Button } from "../components/ui/button";
+import { Toggle } from "../components/ui/toggle";
 import { Badge } from "lucide-react";
 import Player from "./Player";
 import { useRef } from "react";

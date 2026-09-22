@@ -1,4 +1,4 @@
-import { useSettingsStore } from "../../../zustand/store";
+import { useSettingsStore } from "../../zustand/store";
 import { send } from "@app/preload";
 import { Label } from "@renderer/components/ui/label";
 import { Input } from "@renderer/components/ui/input";

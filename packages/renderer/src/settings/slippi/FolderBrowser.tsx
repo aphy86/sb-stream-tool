@@ -1,8 +1,8 @@
 import { useSettingsStore } from "@renderer/zustand/store";
-import { Button } from "../ui/button";
 import { send } from "@app/preload";
 import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
 import { SlippiRelayConfig } from "@app/common";
+import { Button } from "@renderer/components/ui/button";
 
 function FolderBrowser({ disabled }: { disabled: boolean }) {
   const savedDirectory = useSettingsStore(
@@ -26,7 +26,7 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
         send("slippi-relay/start", {
           type: "folder",
           listenPath: directory,
-        } as SlippiRelayConfig).catch((reason) => console.log(reason));
+        } as SlippiRelayConfig).catch(console.error);
         write({
           directory: directory,
         });

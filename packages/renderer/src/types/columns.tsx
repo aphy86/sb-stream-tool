@@ -1,7 +1,7 @@
 "use client";
 
 import { createAppColumnHelper } from "@renderer/components/ui/data-table";
-import { SetTableEntry } from "./tournament";
+import { SetTableEntry } from "./event-sets";
 import { Checkbox } from "@renderer/components/ui/checkbox";
 
 const columnHelper = createAppColumnHelper<SetTableEntry>();

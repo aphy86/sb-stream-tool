@@ -4,6 +4,7 @@ import {
   onNewSlippiGameData,
   onNewSlippiGameEndData,
   send,
+  updateOverlay,
 } from "@app/preload";
 import { useSettingsStore } from "@renderer/zustand/store";
 import {
@@ -11,8 +12,8 @@ import {
   useTypedAppFormContext,
 } from "@renderer/utils/form";
 import { formOptions } from "@tanstack/react-form";
-import { MatchSchema } from "@renderer/types/MatchSchema";
-import { findSlippiWinner } from "@renderer/utils/helpers";
+import { findSlippiWinner } from "./helpers";
+import { MatchSchema } from "@renderer/utils/validators";
 
 export function useSlippiDataHandler() {
   const form = useTypedAppFormContext({
@@ -20,7 +21,7 @@ export function useSlippiDataHandler() {
     defaultValues: MatchDefaultValues,
     onSubmit: async ({ value }) => {
       console.log(value);
-      // onSubmit(value);
+      updateOverlay(value).catch(console.error);
     },
     validators: {
       onChange: MatchSchema,
@@ -49,7 +50,6 @@ export function useSlippiDataHandler() {
 
     onNewSlippiGameData((data) => {
       const setEnded = hasSetEnded();
-      console.log(data);
       if (setEnded || !data.isSameGame) {
         if (data.isTeams) {
           form.setFieldValue("setFormat", "Doubles");
@@ -80,21 +80,16 @@ export function useSlippiDataHandler() {
             );
             j++
           ) {
-            form.resetField(`teams[${i}].players[${j}].gameInfo.altCostume`);
             form.setFieldValue(`teams[${i}].players[${j}].gameInfo`, {
               character: playerInfo[i][j].character,
               altCostume: playerInfo[i][j].color,
               port: playerInfo[i][j].port,
             });
-            console.log(
-              "IMMEDIATELY AFTER",
-              form.getFieldValue(`teams[${i}].players[${j}].gameInfo`),
-            );
           }
         }
       }
 
-      send("obs/play-game-start-scenes").catch((error) => console.log(error));
+      send("obs/play-game-start-scenes").catch(console.error);
 
       if (slippiRelayStatus !== "disabled" && slippiRelayAutoUpdate) {
         form.handleSubmit();
@@ -123,9 +118,9 @@ export function useSlippiDataHandler() {
 
         // Set officially ended, new set, else game officially ended, new game
         if (newScore >= scoreToBeat) {
-          send("obs/play-set-end-scenes").catch((error) => console.log(error));
+          send("obs/play-set-end-scenes").catch(console.error);
         } else {
-          send("obs/play-game-end-scenes").catch((error) => console.log(error));
+          send("obs/play-game-end-scenes").catch(console.error);
         }
 
         if (slippiRelayStatus !== "disabled" && slippiRelayAutoUpdate) {

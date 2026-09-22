@@ -1,24 +1,25 @@
 import { Route, Router, Switch } from "wouter";
 import { GameProfileProvider, ThemeProvider } from "./hooks/providers";
 import { useHashLocation } from "wouter/use-hash-location";
-import Match from "./components/Match";
+import Match from "./match/Match";
 import Layout from "./layout";
-import Settings from "./components/settings/Settings";
-import PlatformSettings from "./components/settings/platform/PlatformSettings";
+import Settings from "./settings/Settings";
+import PlatformSettings from "./settings/platform/PlatformSettings";
 import { PLATFORMS } from "./platform/registry";
 import { MatchDefaultValues, useAppForm } from "./utils/form";
-import Obs from "./components/settings/obs/Obs";
-import Slippi from "./components/slippi/Slippi";
-import Shortcuts from "./components/settings/shortcuts/Shortcuts";
+import Obs from "./settings/obs/Obs";
+import Shortcuts from "./settings/shortcuts/Shortcuts";
 import GlobalHotkeys from "./components/GlobalHotkeys";
-import { MatchSchema } from "./types/MatchSchema";
-import { onSubmit } from "./utils/helpers";
+import { updateOverlay } from "@app/preload";
+import Slippi from "./settings/slippi/Slippi";
+import { MatchSchema } from "./utils/validators";
+
 function App() {
   const form = useAppForm({
     defaultValues: MatchDefaultValues,
     onSubmit: async ({ value }) => {
       console.log(value);
-      onSubmit(value);
+      updateOverlay(value).catch(console.error);
     },
     validators: {
       onChange: MatchSchema,

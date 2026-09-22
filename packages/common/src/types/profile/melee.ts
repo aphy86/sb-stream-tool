@@ -32,9 +32,3 @@ export type MeleeCharacter =
   | "Young Link"
   | "Zelda"
   | "Random";
-
-export type AltCostumeEntry = {
-  characterName: MeleeCharacter;
-  numberOfCostumes: number;
-  colors: string[];
-};

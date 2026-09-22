@@ -1,9 +1,12 @@
 import { useSettingsStore } from "@renderer/zustand/store";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Label } from "../ui/label";
 import FolderBrowser from "./FolderBrowser";
 import ConsoleConnection from "./ConsoleConnection";
 import { SlippiRelayStatus } from "@app/common";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@renderer/components/ui/radio-group";
+import { Label } from "@renderer/components/ui/label";
 
 function Slippi() {
   const relayStatus = useSettingsStore((state) => state.slippiRelayStatus);
