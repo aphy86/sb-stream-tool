@@ -1,4 +1,4 @@
-import { PPlusCharacter } from "./types";
+import { PPlusCharacter } from "./types/index.js";
 
 export const pPlusCharacters: PPlusCharacter[] = [
   "Bowser",

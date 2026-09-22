@@ -380,7 +380,14 @@ const Player = withForm({
                     <Select
                       name={field.name}
                       value={field.state.value}
-                      onValueChange={(value) => field.handleChange(value)}
+                      onValueChange={(value) => {
+                        // https://github.com/radix-ui/primitives/issues/3068
+                        if (value === "") {
+                          // console.log(altCostumeSelected)
+                          return;
+                        }
+                        field.handleChange(value);
+                      }}
                     >
                       <SelectTrigger id={field.name} name={field.name}>
                         <SelectValue placeholder="Click for options"></SelectValue>

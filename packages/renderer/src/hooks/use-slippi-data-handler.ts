@@ -49,7 +49,7 @@ export function useSlippiDataHandler() {
 
     onNewSlippiGameData((data) => {
       const setEnded = hasSetEnded();
-
+      console.log(data);
       if (setEnded || !data.isSameGame) {
         if (data.isTeams) {
           form.setFieldValue("setFormat", "Doubles");
@@ -80,11 +80,16 @@ export function useSlippiDataHandler() {
             );
             j++
           ) {
+            form.resetField(`teams[${i}].players[${j}].gameInfo.altCostume`);
             form.setFieldValue(`teams[${i}].players[${j}].gameInfo`, {
               character: playerInfo[i][j].character,
               altCostume: playerInfo[i][j].color,
               port: playerInfo[i][j].port,
             });
+            console.log(
+              "IMMEDIATELY AFTER",
+              form.getFieldValue(`teams[${i}].players[${j}].gameInfo`),
+            );
           }
         }
       }
