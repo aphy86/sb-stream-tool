@@ -1,4 +1,3 @@
-import { useGameProfile } from "@renderer/hooks/use-game-profile";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
 import { Field, FieldLabel } from "../components/ui/field";
 import { Input } from "../components/ui/input";
@@ -19,7 +18,8 @@ import { useRef } from "react";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
 import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
-import { getValueWithinRange } from "@renderer/utils/helpers";
+import { clamp } from "@renderer/utils/helpers";
+
 const Team = withForm({
   defaultValues: MatchDefaultValues,
   props: {
@@ -28,7 +28,7 @@ const Team = withForm({
   render: function TeamSection({ form, teamNumber }) {
     const max = 100;
     const min = 0;
-    const gameProfile = useGameProfile();
+    const gameProfile = useSettingsStore((state) => state.gameProfile);
     const setFormat = useSelector(
       form.store,
       (state) => state.values.setFormat,
@@ -59,22 +59,14 @@ const Team = withForm({
     const increaseScore = () => {
       form.setFieldValue(
         `teams[${teamNumber}].score`,
-        getValueWithinRange(
-          form.getFieldValue(`teams[${teamNumber}].score`) + 1,
-          max,
-          min,
-        ),
+        clamp(form.getFieldValue(`teams[${teamNumber}].score`) + 1, max, min),
       );
     };
 
     const decreaseScore = () => {
       form.setFieldValue(
         `teams[${teamNumber}].score`,
-        getValueWithinRange(
-          form.getFieldValue(`teams[${teamNumber}].score`) - 1,
-          max,
-          min,
-        ),
+        clamp(form.getFieldValue(`teams[${teamNumber}].score`) - 1, max, min),
       );
     };
     useHotkey(scoreDecreaseHotkey, decreaseScore, {

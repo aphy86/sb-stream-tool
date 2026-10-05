@@ -9,7 +9,7 @@ export class ConnectionStatusCommunicator implements EventSink {
 
   update(connectionStatus: { type: string; status: string }): void {
     this.browserWindow.webContents.send(
-      "connection-status",
+      "connection-status/change",
       connectionStatus.type,
       connectionStatus.status,
     );

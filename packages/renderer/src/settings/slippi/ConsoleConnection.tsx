@@ -6,6 +6,7 @@ import { sendToastMessage } from "@renderer/components/ui/toast";
 import { Label } from "@renderer/components/ui/label";
 import { Input } from "@renderer/components/ui/input";
 import { Button } from "@renderer/components/ui/button";
+import { useConnectionStatus } from "@renderer/hooks/use-connection-status";
 
 function ConsoleConnection() {
   const savedIp = useSettingsStore((state) => state.slippiWiiRelayIp);
@@ -18,9 +19,7 @@ function ConsoleConnection() {
   );
   const [ip, setIp] = useState(savedIp);
   const [port, setPort] = useState(savedPort.toString());
-  const connectionStatus = useSettingsStore(
-    (state) => state.connectionStatuses,
-  ).get("slippi-wii");
+  const connectionStatus = useConnectionStatus("slippi-wii");
 
   return (
     <form

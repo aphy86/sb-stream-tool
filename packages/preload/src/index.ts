@@ -1,5 +1,3 @@
-// import { sha256sum } from "./nodeCrypto.js";
-// import { versions } from "./versions.js";
 import {
   SlippiGameStartData,
   SlippiGameEndData,
@@ -12,8 +10,8 @@ function send(channel: string, ...args: any[]) {
   return ipcRenderer.invoke(channel, ...args);
 }
 
-function navigation(callback: (location: string) => void) {
-  ipcRenderer.on("navigation", (_event, location) => callback(location));
+function redirect(callback: (location: string) => void) {
+  ipcRenderer.on("redirect", (_event, location) => callback(location));
 }
 
 function toastMessage(
@@ -32,14 +30,18 @@ function clearAllListeners(channel: string) {
   ipcRenderer.removeAllListeners(channel);
 }
 
-function onNewSlippiGameData(callback: (data: SlippiGameStartData) => void) {
-  ipcRenderer.on("slippi:new-game-start-data", (_event, data) =>
+function onNewSlippiRelayGameStartData(
+  callback: (data: SlippiGameStartData) => void,
+) {
+  ipcRenderer.on("slippi-relay/new-game-start-data", (_event, data) =>
     callback(data),
   );
 }
 
-function onNewSlippiGameEndData(callback: (winner: SlippiGameEndData) => void) {
-  ipcRenderer.on("slippi:new-game-end-data", (_event, winner) =>
+function onNewSlippiRelayGameEndData(
+  callback: (winner: SlippiGameEndData) => void,
+) {
+  ipcRenderer.on("slippi-relay/new-game-end-data", (_event, winner) =>
     callback(winner),
   );
 }
@@ -47,7 +49,7 @@ function onNewSlippiGameEndData(callback: (winner: SlippiGameEndData) => void) {
 function onConnectionStatusChange(
   callback: (type: string, status: string) => void,
 ) {
-  ipcRenderer.on("connection-status", (_event, type, status) =>
+  ipcRenderer.on("connection-status/change", (_event, type, status) =>
     callback(type, status),
   );
 }
@@ -55,17 +57,14 @@ function onConnectionStatusChange(
 function onGameProfileChange(callback: (profileId: GameProfileId) => void) {
   ipcRenderer.on("profile/change", (_event, profileId) => callback(profileId));
 }
-// function autoStopSlippiRelay() {
-//   return ipcRenderer.invoke("slippi:autoStopReadingFolder");
-// }
 
 export {
   send,
   updateOverlay,
-  navigation,
+  redirect,
   toastMessage,
-  onNewSlippiGameData,
-  onNewSlippiGameEndData,
+  onNewSlippiRelayGameStartData,
+  onNewSlippiRelayGameEndData,
   clearAllListeners,
   onConnectionStatusChange,
   onGameProfileChange,

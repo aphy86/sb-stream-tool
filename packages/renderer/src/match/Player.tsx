@@ -1,4 +1,3 @@
-import { useGameProfile } from "@renderer/hooks/use-game-profile";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
 import { useSelector } from "@tanstack/react-form";
 import { useState } from "react";
@@ -12,7 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 import { ChevronsUpDown, Minus, Plus } from "lucide-react";
 import {
   Command,
@@ -22,7 +25,8 @@ import {
   CommandList,
 } from "../components/ui/command";
 import { meleeAltCostumes, MeleeCharacter, meleeCharacters } from "@app/common";
-import { tailwindTeamBorderColorLookup } from "@renderer/utils/helpers";
+import { useSettingsStore } from "@renderer/zustand/store";
+import { tailwindTeamBorderColorLookup } from "./helpers";
 
 const Player = withForm({
   defaultValues: MatchDefaultValues,
@@ -31,7 +35,7 @@ const Player = withForm({
     playerNumber: 0,
   },
   render: function PlayerSection({ form, teamNumber, playerNumber }) {
-    const gameProfile = useGameProfile();
+    const gameProfile = useSettingsStore((state) => state.gameProfile);
     const characterSelected = useSelector(
       form.store,
       (state) =>

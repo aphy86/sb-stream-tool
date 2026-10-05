@@ -25,7 +25,7 @@ const EMPTY_STATE: EventSetsState = {
   loading: false,
 };
 
-class EventSetsStore {
+export class EventSetsStore {
   private states: Map<string, EventSetsState>;
 
   private listeners: Map<string, Set<() => void>>;
@@ -125,23 +125,23 @@ class EventSetsStore {
       this.flushTimers.set(key, timer);
     }
   }
+
+  async fetchEventSets(
+    key: string,
+    apiKey: string,
+    platform: PlatformId,
+    eventId: EventId,
+    opts: { upcomingOnly: boolean },
+  ) {
+    this.reset(key);
+    this.setLoading(key, true);
+
+    await getClient(apiKey, platform).getSets(eventId, opts, (progress) =>
+      this.onProgress(key, progress),
+    );
+
+    this.setLoading(key, false);
+  }
 }
 
-export const eventSetsStore = new EventSetsStore();
-
-export async function fetchEventSets(
-  key: string,
-  apiKey: string,
-  platform: PlatformId,
-  eventId: EventId,
-  opts: { upcomingOnly: boolean },
-) {
-  eventSetsStore.reset(key);
-  eventSetsStore.setLoading(key, true);
-
-  await getClient(apiKey, platform).getSets(eventId, opts, (progress) =>
-    eventSetsStore.onProgress(key, progress),
-  );
-
-  eventSetsStore.setLoading(key, false);
-}
+// export const eventSetsStore = new EventSetsStore();

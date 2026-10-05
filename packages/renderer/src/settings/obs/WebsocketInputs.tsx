@@ -3,12 +3,13 @@ import { send } from "@app/preload";
 import { Label } from "@renderer/components/ui/label";
 import { Input } from "@renderer/components/ui/input";
 import { Button } from "@renderer/components/ui/button";
-import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from "@renderer/components/ui/dialog";
+import { useConnectionStatus } from "@renderer/hooks/use-connection-status";
+import { useState } from "react";
 
 function WebsocketInputs() {
   const savedIp = useSettingsStore((state) => state.websocketIp);
@@ -16,13 +17,11 @@ function WebsocketInputs() {
   const savedPassword = useSettingsStore((state) => state.websocketPassword);
   const update = useSettingsStore((state) => state.updateWebsocketSettings);
 
-  const [ip, setIp] = useHydratedState(savedIp);
-  const [port, setPort] = useHydratedState(savedPort);
-  const [password, setPassword] = useHydratedState(savedPassword);
+  const [ip, setIp] = useState(savedIp);
+  const [port, setPort] = useState(savedPort);
+  const [password, setPassword] = useState(savedPassword);
 
-  const obsWebsocketStatus = useSettingsStore(
-    (state) => state.connectionStatuses,
-  ).get("obs");
+  const obsWebsocketStatus = useConnectionStatus("obs-websocket");
 
   return (
     <form

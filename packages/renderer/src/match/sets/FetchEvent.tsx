@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { Button } from "./ui/button";
-import { Label } from "./ui/label";
-import { Input } from "./ui/input";
 import { useSettingsStore } from "@renderer/zustand/store";
+import {
+  getClient,
+  getPlatformByEventUrl,
+  resolveEventUrl,
+} from "@renderer/platform/registry";
 import {
   Sheet,
   SheetClose,
@@ -12,18 +14,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "./ui/sheet";
-import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
-import {
-  getClient,
-  getPlatformByEventUrl,
-  resolveEventUrl,
-} from "@renderer/platform/registry";
+} from "@renderer/components/ui/sheet";
+import { Button } from "@renderer/components/ui/button";
+import { Label } from "@renderer/components/ui/label";
+import { Input } from "@renderer/components/ui/input";
 
 function FetchEvent() {
   const savedEventUrl = useSettingsStore((state) => state.eventUrl);
   const update = useSettingsStore((state) => state.updateEventUrl);
-  const [eventUrl, setEventUrl] = useHydratedState(savedEventUrl);
+  const [eventUrl, setEventUrl] = useState(savedEventUrl);
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [statusMessage, setStatusMessage] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);

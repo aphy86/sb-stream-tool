@@ -16,13 +16,13 @@ import { dialog, shell } from "electron";
 import { SettingsStore } from "./components/SettingsStore.js";
 import { SlippiRelayHandler } from "./components/slippi/SlippiRelayHandler.js";
 
-export type SharedRegistry = {
+export type SocketRegistry = {
   [key: string]: (...args: any[]) => Promise<any> | any;
 };
 
 export function createHandlers(
   mainSocket: Socket<ServerToClientEvents, ClientToServerEvents>,
-): SharedRegistry {
+): SocketRegistry {
   return {
     "obs/connect": (ip: string, port: string, password: string) => {
       ObsController.connect("ws://", ip, port, password);
@@ -73,7 +73,7 @@ export function createHandlers(
     "shortcuts/save-shortcuts": (newSettings: ShortcutSettings) =>
       SettingsStore.writeShortcutSettings(newSettings),
 
-    "file:openDialog": async () => {
+    "file/open-dialog": async () => {
       const { canceled, filePaths } = await dialog.showOpenDialog({
         properties: ["openDirectory"],
       });

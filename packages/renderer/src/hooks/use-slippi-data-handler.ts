@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import {
   clearAllListeners,
-  onNewSlippiGameData,
-  onNewSlippiGameEndData,
+  onNewSlippiRelayGameStartData,
+  onNewSlippiRelayGameEndData,
   send,
   updateOverlay,
 } from "@app/preload";
@@ -31,7 +31,7 @@ export function useSlippiDataHandler() {
     (state) => state.slippiRelayStatus,
   );
   const slippiRelayAutoUpdate = useSettingsStore(
-    (state) => state.slippiRelayAutoupdate,
+    (state) => state.slippiRelayAutoUpdate,
   );
   const slippiRelayReversedOrder = useSettingsStore(
     (state) => state.slippiReversedOrder,
@@ -48,7 +48,7 @@ export function useSlippiDataHandler() {
       return false;
     };
 
-    onNewSlippiGameData((data) => {
+    onNewSlippiRelayGameStartData((data) => {
       const setEnded = hasSetEnded();
       if (setEnded || !data.isSameGame) {
         if (data.isTeams) {
@@ -95,7 +95,7 @@ export function useSlippiDataHandler() {
         form.handleSubmit();
       }
     });
-    return () => clearAllListeners("slippi:new-game-start-data");
+    return () => clearAllListeners("slippi-relay/new-game-start-data");
   }, [
     slippiRelayStatus,
     slippiRelayAutoUpdate,
@@ -104,7 +104,7 @@ export function useSlippiDataHandler() {
   ]);
 
   useEffect(() => {
-    onNewSlippiGameEndData((winner) => {
+    onNewSlippiRelayGameEndData((winner) => {
       const winnerIndex = findSlippiWinner(
         winner.winners,
         form.getFieldValue("teams"),
@@ -128,6 +128,6 @@ export function useSlippiDataHandler() {
         }
       }
     });
-    return () => clearAllListeners("slippi:new-game-end-data");
+    return () => clearAllListeners("slippi-relay/new-game-end-data");
   }, [slippiRelayStatus, slippiRelayAutoUpdate, form]);
 }

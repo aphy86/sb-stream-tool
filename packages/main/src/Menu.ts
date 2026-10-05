@@ -44,7 +44,7 @@ export function buildMenu(browserWindow: BrowserWindow) {
       submenu: [
         {
           label: "Settings",
-          click: () => browserWindow.webContents.send("navigation", "settings"),
+          click: () => browserWindow.webContents.send("redirect", "settings"),
         },
         {
           role: "quit",

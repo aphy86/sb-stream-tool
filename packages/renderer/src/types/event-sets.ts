@@ -1,5 +1,7 @@
 // import type { PlayerInfo } from "@app/common";
 
+import { EventSetsStore } from "@renderer/lib/EventSetsStore";
+
 // export type Set = {
 //   stream: string;
 //   matchName: string;
@@ -15,4 +17,9 @@ export type SetTableEntry = {
   matchName: string;
   firstGroupName: string;
   secondGroupName: string;
+};
+
+export type EventSetsProviderProps = {
+  children: React.ReactNode;
+  eventSetsStore?: EventSetsStore;
 };

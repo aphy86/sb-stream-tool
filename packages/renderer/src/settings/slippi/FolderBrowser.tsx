@@ -1,8 +1,9 @@
 import { useSettingsStore } from "@renderer/zustand/store";
 import { send } from "@app/preload";
-import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
 import { SlippiRelayConfig } from "@app/common";
 import { Button } from "@renderer/components/ui/button";
+import { useState } from "react";
+import { useConnectionStatus } from "@renderer/hooks/use-connection-status";
 
 function FolderBrowser({ disabled }: { disabled: boolean }) {
   const savedDirectory = useSettingsStore(
@@ -12,11 +13,9 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
   const write = useSettingsStore(
     (state) => state.writeSlippiRelaySettingsToFile,
   );
-  const [directory, setDirectory] = useHydratedState(savedDirectory);
+  const [directory, setDirectory] = useState(savedDirectory);
 
-  const connectionStatus = useSettingsStore(
-    (state) => state.connectionStatuses,
-  ).get("slippi-folder");
+  const connectionStatus = useConnectionStatus("slippi-folder");
 
   return (
     <form
@@ -51,7 +50,7 @@ function FolderBrowser({ disabled }: { disabled: boolean }) {
               type="button"
               disabled={disabled}
               onClick={() => {
-                send("file:openDialog")
+                send("file/open-dialog")
                   .then((directory) => setDirectory(directory as string))
                   .catch((reason) => console.log(reason));
               }}

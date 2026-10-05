@@ -10,10 +10,10 @@ import { io, Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "../types.js";
 import { SocketioServer } from "../components/SocketioServer.js";
 import { ToastMessageCommunicator } from "../components/ToastMessageCommunication.js";
-import { ipcSetup } from "../Ipc.js";
 import { EventStream } from "../components/EventStream.js";
 import { SlippiRelayHandler } from "../components/slippi/SlippiRelayHandler.js";
 import { ConnectionStatusCommunicator } from "../components/ConnectionStatusCommunication.js";
+import { ipcSetup } from "../ipc.js";
 
 class WindowManager implements AppModule {
   readonly #preload: { path: string };

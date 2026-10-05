@@ -10,7 +10,7 @@ export class SlippiConnectionCommunicator implements EventSink {
 
   update(status: SlippiConnectionStatus): void {
     this.browserWindow.webContents.send(
-      "slippi:connection-status-change",
+      "slippi-relay/connection-status-change",
       status,
     );
   }

@@ -150,7 +150,7 @@ export class ObsController {
     this.socket.on("ConnectionError", (error) => {
       console.log("OBS Websocket Connection Error");
       EventStream.notify("connection", {
-        type: "obs",
+        type: "obs-websocket",
         status: "error",
       });
       EventStream.notify(
@@ -163,7 +163,7 @@ export class ObsController {
     this.socket.on("ConnectionClosed", () => {
       console.log("OBS Websocket Connection Closed");
       EventStream.notify("connection", {
-        type: "obs",
+        type: "obs-websocket",
         status: "disconnected",
       });
       EventStream.notify("toast", "OBS Connection Closed", `Disconnected`);
@@ -172,7 +172,7 @@ export class ObsController {
     this.socket.on("ConnectionOpened", () => {
       console.log("OBS Websocket Connection Opened");
       EventStream.notify("connection", {
-        type: "obs",
+        type: "obs-websocket",
         status: "connected",
       });
       EventStream.notify(

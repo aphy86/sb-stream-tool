@@ -1,13 +1,13 @@
-import { clearAllListeners, navigation } from "@app/preload";
+import { clearAllListeners, redirect } from "@app/preload";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
-export function useNavigationHandler() {
+export function useRedirect() {
   const [, navigate] = useLocation();
   useEffect(() => {
-    navigation((location) => {
+    redirect((location) => {
       navigate(`/${location}`);
     });
-    return () => clearAllListeners("navigation");
+    return () => clearAllListeners("redirect");
   }, [navigate]);
 }

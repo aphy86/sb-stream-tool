@@ -4,11 +4,13 @@ import {
   resolveEventUrl,
 } from "@renderer/platform/registry";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { setFieldValues } from "@renderer/utils/helpers";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { useCreateAtom, useSelector } from "@tanstack/react-store";
 import { RowSelectionState } from "@tanstack/react-table";
 import { useRef, useState } from "react";
+import { columns } from "@renderer/types/columns";
+import { useEventSetsStore } from "@renderer/hooks/use-event-sets-store";
+import { setMatchFieldValues } from "../helpers";
 import {
   Sheet,
   SheetClose,
@@ -18,13 +20,10 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "./ui/sheet";
-import { Button } from "./ui/button";
-import { Spinner } from "./ui/spinner";
-import { DataTable } from "./ui/data-table";
-import { columns } from "@renderer/types/columns";
-import { useEventSetsStore } from "@renderer/hooks/use-event-sets-store";
-import { eventSetsStore, fetchEventSets } from "@renderer/lib/EventSetsStore";
+} from "@renderer/components/ui/sheet";
+import { Button } from "@renderer/components/ui/button";
+import { Spinner } from "@renderer/components/ui/spinner";
+import { DataTable } from "@renderer/components/ui/data-table";
 
 const EventSets = withForm({
   defaultValues: MatchDefaultValues,
@@ -47,15 +46,10 @@ const EventSets = withForm({
     const rowSelectionAtom = useCreateAtom<RowSelectionState>({});
     const selectedRow = useSelector(rowSelectionAtom);
     const timeSince = useRef(0);
-
-    const {
-      tournamentName,
-      sets,
-      tableRows,
-      totalPages,
-      pagesLoaded,
-      loading,
-    } = useEventSetsStore(eventSetsStoreKey);
+    const [
+      fetchEventSets,
+      { tournamentName, sets, tableRows, totalPages, pagesLoaded, loading },
+    ] = useEventSetsStore(eventSetsStoreKey);
 
     const applySet = () => {
       const selectedSetIndex = parseInt(Object.keys(selectedRow)[0]);
@@ -65,7 +59,7 @@ const EventSets = withForm({
 
       setStatusMessage(`Applying set ${selectedSetIndex}...`);
 
-      setFieldValues(form, sets[selectedSetIndex]);
+      setMatchFieldValues(form, sets[selectedSetIndex]);
 
       setStatusMessage(`Applied set ${selectedSetIndex}!`);
 
@@ -84,23 +78,16 @@ const EventSets = withForm({
           const platformId = resolveEventUrl(savedEventUrl);
           if (open === false || savedEventSlug === "" || !platformId) return;
 
-          const current = eventSetsStore.getSnapshot(eventSetsStoreKey);
           const timeNow = Date.now();
-          if (current.loading || timeNow - timeSince.current <= 120000) return;
+          if (loading && timeNow - timeSince.current <= 120000) return;
 
           timeSince.current = timeNow;
           getClient(savedApiKey, platformId.platform).abortRequest();
 
           requestAnimationFrame(() => {
-            fetchEventSets(
-              eventSetsStoreKey,
-              savedApiKey,
-              platformId.platform,
-              platformId,
-              {
-                upcomingOnly: live,
-              },
-            ).catch(console.error);
+            fetchEventSets(savedApiKey, platformId.platform, platformId, {
+              upcomingOnly: live,
+            }).catch(console.error);
           });
         }}
       >

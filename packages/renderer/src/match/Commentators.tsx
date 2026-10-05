@@ -1,7 +1,7 @@
+import { Button } from "@renderer/components/ui/button";
+import { Field, FieldLabel } from "@renderer/components/ui/field";
+import { Input } from "@renderer/components/ui/input";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { Field, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
 
 const CommentatorField = ({ ...props }: React.ComponentProps<typeof Field>) => {
   return <Field className="flex flex-col gap-0.5" {...props}></Field>;

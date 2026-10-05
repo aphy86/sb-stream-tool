@@ -1,7 +1,6 @@
 import {
   meleeCharacters,
   SlippiGameData,
-  SlippiGameEndData,
   SlippiPlayer,
   MeleeCharacter,
   meleeAltCostumes,
@@ -11,9 +10,7 @@ import {
   GameEndMethod,
   GameEndType,
   GameStartType,
-  MetadataType,
   PostFrameUpdateType,
-  StatsType,
   characters as characterUtils,
 } from "@slippi/slippi-js/node";
 import { TeamAggregate } from "../../types.js";

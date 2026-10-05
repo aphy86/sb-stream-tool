@@ -12,7 +12,6 @@ import {
   MetadataType,
   SlippiGame,
   StatsType,
-  characters as characterUtils,
 } from "@slippi/slippi-js/node";
 import { SlippiSettingsData } from "../../types.js";
 import { EventStream } from "../EventStream.js";
@@ -87,7 +86,6 @@ export class SlippiFolderRelay implements SlippiRelay {
             },
           });
         }
-
         game = this.games.get(path);
         gameState = game?.state;
         settings = game?.gameDataController.getSettings();
@@ -98,7 +96,8 @@ export class SlippiFolderRelay implements SlippiRelay {
           type: "slippi-folder",
           status: "error",
         });
-        return;
+        throw err;
+        // return;
       }
       if (!gameState?.settings && settings) {
         // a new game has ACTUALLY started, since the settings portion didn't exist before and there are new settings
@@ -114,7 +113,10 @@ export class SlippiFolderRelay implements SlippiRelay {
           isSameGame: sameGame,
         };
 
-        this.browserWindow.webContents.send("slippi:new-game-start-data", data);
+        this.browserWindow.webContents.send(
+          "slippi-relay/new-game-start-data",
+          data,
+        );
 
         this.previousPlayers = newGameData;
       }
@@ -144,7 +146,7 @@ export class SlippiFolderRelay implements SlippiRelay {
               winners: gameWinners.map((winner) => winner.playerIndex),
             };
             this.browserWindow?.webContents.send(
-              "slippi:new-game-end-data",
+              "slippi-relay/new-game-end-data",
               gameEndData,
             );
             console.log(
@@ -157,35 +159,26 @@ export class SlippiFolderRelay implements SlippiRelay {
         game.state.gameEnded = true;
         this.games.set(path, game);
       }
+
+      EventStream.notify("connection", {
+        type: "slippi-folder",
+        status: "connected",
+      });
     });
   }
 
-  async stop(quiet: boolean) {
+  async stop() {
     if (this.listenPath) {
       this.watcher?.unwatch(this.listenPath);
       this.watcher?.close();
-      EventStream.notify("connection", {
-        type: "slippi-folder",
-        status: "disconnected",
-      });
       this.listenPath = "";
     }
 
-    if (!quiet) {
-      EventStream.notify("toast", "Slippi Relay", "Stopped Relay");
-    }
+    EventStream.notify("toast", "Slippi Relay", "Stopped Relay");
+
+    EventStream.notify("connection", {
+      type: "slippi-folder",
+      status: "disconnected",
+    });
   }
-
-  // async setup() {
-  //   this.watcher = chokidar.watch(this.listenPath, {
-  //     ignored: "!*.slp", // TODO: This doesn't work. Use regex?
-  //     depth: 0,
-  //     persistent: true,
-  //     usePolling: true,
-  //     ignoreInitial: true,
-  //   });
-
-  //   this.read();
-  //   EventStream.notify("Slippi Folder Relay", "Started Folder Relay");
-  // }
 }

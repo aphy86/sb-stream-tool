@@ -2,6 +2,7 @@ import { MatchDefaultValues, withForm } from "@renderer/utils/form";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { useRef, useState } from "react";
 import * as z from "zod";
+import { getPlatformByEventUrl } from "@renderer/platform/registry";
 import {
   Sheet,
   SheetClose,
@@ -11,12 +12,11 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "./ui/sheet";
-import { Button } from "./ui/button";
-import { Label } from "./ui/label";
-import { Input } from "./ui/input";
-import { setFieldValues } from "@renderer/utils/helpers";
-import { getPlatformByEventUrl } from "@renderer/platform/registry";
+} from "@renderer/components/ui/sheet";
+import { Button } from "@renderer/components/ui/button";
+import { Label } from "@renderer/components/ui/label";
+import { Input } from "@renderer/components/ui/input";
+import { setMatchFieldValues } from "../helpers";
 
 const ValidSet = z.string().min(1, "Set ID cannot be empty");
 
@@ -66,7 +66,7 @@ const FetchSet = withForm({
       }
       setStatus(`Set ${validSet.data} found! Applying set data...`);
 
-      setFieldValues(form, set);
+      setMatchFieldValues(form, set);
 
       clearTimeout(timeoutId.current);
       timeoutId.current = setTimeout(() => {

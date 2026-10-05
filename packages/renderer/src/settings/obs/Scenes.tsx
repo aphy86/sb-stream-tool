@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@renderer/components/ui/select";
 import { Spinbox } from "@renderer/components/ui/spinbox";
-import { useHydratedState } from "@renderer/hooks/use-hydrated-state";
 import { ObsScene } from "@renderer/zustand/slices/obsScenesSlice";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { useState } from "react";
@@ -29,11 +28,11 @@ function Scenes() {
   });
 
   const [gameStartScenes, setGameStartScenes] =
-    useHydratedState<ObsScene[]>(savedGameStartScenes);
+    useState<ObsScene[]>(savedGameStartScenes);
   const [gameEndScenes, setGameEndScenes] =
-    useHydratedState<ObsScene[]>(savedGameEndScenes);
+    useState<ObsScene[]>(savedGameEndScenes);
   const [setEndScenes, setSetEndScenes] =
-    useHydratedState<ObsScene[]>(savedSetEndScenes);
+    useState<ObsScene[]>(savedSetEndScenes);
 
   return (
     <div className="flex flex-col gap-2 pb-1">

@@ -140,7 +140,10 @@ export class SlippiConsoleRelay implements SlippiRelay {
           isSameGame: sameGame,
         };
 
-        this.browserWindow.webContents.send("slippi:new-game-start-data", data);
+        this.browserWindow.webContents.send(
+          "slippi-relay/new-game-start-data",
+          data,
+        );
         this.previousPlayers = newGameData;
       }
     });
@@ -182,7 +185,7 @@ export class SlippiConsoleRelay implements SlippiRelay {
               winners: winnersIndices,
             };
             this.browserWindow?.webContents.send(
-              "slippi:new-game-end-data",
+              "slippi-relay/new-game-end-data",
               gameEndData,
             );
           }
@@ -197,7 +200,6 @@ export class SlippiConsoleRelay implements SlippiRelay {
 
   async stop() {
     this.connection.disconnect();
-
     this.clearPrevGame();
   }
 }
