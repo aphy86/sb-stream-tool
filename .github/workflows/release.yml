@@ -1,0 +1,85 @@
+# Continuous delivery: pushing a version tag (e.g. v0.0.5) runs the quality gate, builds the
+# app on Windows, macOS, and Linux, and creates a DRAFT GitHub release with the installers.
+# Nothing is published until a person reviews the draft and clicks "Publish release".
+#
+# Run it manually (Actions tab > Release > Run workflow) to build installers without a release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality gate
+    uses: ./.github/workflows/quality.yml
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+      npm_config_audit: false
+      npm_config_fund: false
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      # Full install (with scripts): packaging needs Electron and native module rebuilds.
+      - run: npm ci
+      - name: Set app version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Build and package
+        run: npm run compile -- -p never
+      - uses: actions/upload-artifact@v7
+        with:
+          name: app-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.tar.xz
+            dist/*.dmg
+            dist/*.zip
+            dist/latest*.yml
+          if-no-files-found: error
+          retention-days: 30
+
+  draft-release:
+    name: Create draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: app-*
+          path: dist
+          merge-multiple: true
+      - name: Create draft release with installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --generate-notes \
+            --title "$GITHUB_REF_NAME"

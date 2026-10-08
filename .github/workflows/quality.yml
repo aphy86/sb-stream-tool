@@ -1,0 +1,134 @@
+# Continuous integration: every push to main and every pull request must pass these checks.
+# Also callable from other workflows (release.yml runs it as a gate before building).
+name: Quality checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Unit tests, lint, and typecheck don't need the Electron or Playwright binaries.
+  ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+  npm_config_audit: false
+  npm_config_fund: false
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint --workspace @app/renderer
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Typecheck renderer (blocking)
+        working-directory: packages/renderer
+        run: npx tsc -b
+      # preload has one pre-existing type error (src/nodeCrypto.ts). Reported here, but not
+      # blocking until it's fixed; then delete continue-on-error so regressions fail the build.
+      - name: Typecheck all packages (non-blocking)
+        continue-on-error: true
+        run: npm run typecheck
+
+  unit-tests:
+    name: Unit tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is where the app is developed and mostly used; Linux mirrors CI/release builds.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Fails if any test fails OR coverage drops below the thresholds in vitest.config.ts.
+      - run: npm run test:coverage
+      - name: Publish coverage to job summary
+        if: always() && matrix.os == 'ubuntu-latest' && hashFiles('coverage/coverage-summary.json') != ''
+        run: node scripts/coverage-summary.mjs
+      - name: Upload coverage report and test results
+        if: always() && matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: |
+            coverage/
+            test-results/
+          retention-days: 14
+
+  e2e-tests:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    env:
+      # This job needs the real Electron binary (the others skip it).
+      ELECTRON_SKIP_BINARY_DOWNLOAD: ""
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Download Electron
+        run: node node_modules/electron/install.js
+      # Chromium plays the role of OBS, loading the overlay as a separate browser.
+      - name: Install Chromium for the overlay
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run end-to-end tests
+        run: xvfb-run --auto-servernum -- npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  # Single required check for branch protection: "Quality gate".
+  quality-gate:
+    name: Quality gate
+    if: always()
+    needs: [lint, typecheck, unit-tests, e2e-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any check failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "lint: ${{ needs.lint.result }}"
+          echo "typecheck: ${{ needs.typecheck.result }}"
+          echo "unit-tests: ${{ needs.unit-tests.result }}"
+          echo "e2e-tests: ${{ needs.e2e-tests.result }}"
+          exit 1
+      - run: echo "All quality checks passed."
