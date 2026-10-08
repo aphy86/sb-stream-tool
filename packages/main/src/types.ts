@@ -1,6 +1,5 @@
-import { Tournament } from "@app/common";
+import { Match } from "@app/common";
 import {
-  FrameEntryType,
   GameStartType,
   PostFrameUpdateType,
   SlippiGame,
@@ -24,12 +23,12 @@ export type TeamAggregate = {
 export type ServerToClientEvents = {
   //   noArg: () => void;
   //   withAck: (data: unknown, callback: (param?: unknown) => void) => void;
-  sendDataToClients: (data: Tournament) => void;
+  sendDataToClients: (data: Match) => void;
 };
 
 export type ClientToServerEvents = {
   // withAck: (data: unknown, callback: (param?: unknown) => void) => void
-  sendDataToServer: (data: Tournament) => void;
+  sendDataToServer: (data: Match) => void;
   overlayUpdateSuccess: () => void;
 };
 

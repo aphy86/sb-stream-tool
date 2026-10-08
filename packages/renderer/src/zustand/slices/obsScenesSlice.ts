@@ -21,7 +21,7 @@ export const createObsScenesSlice: StateCreator<
 > = (set) => ({
   scenes: fromKeys(ALL_OBS_SCENE_TYPES, (): ObsScene[] => []),
   updateScenes: async (scenes) => {
-    const saved: ObsSceneSettings = await send("obs/save-scenes", scenes);
+    const saved: ObsSceneSettings = await send("obs/update-scenes", scenes);
     set((state) => {
       state.scenes = saved;
     });

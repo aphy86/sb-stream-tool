@@ -13,7 +13,7 @@ import { ToastMessageCommunicator } from "../components/ToastMessageCommunicatio
 import { EventStream } from "../components/EventStream.js";
 import { SlippiRelayHandler } from "../components/slippi/SlippiRelayHandler.js";
 import { ConnectionStatusCommunicator } from "../components/ConnectionStatusCommunication.js";
-import { ipcSetup } from "../ipc.js";
+import { ipcSetup } from "../Ipc.js";
 import { ShortcutManager } from "../components/ShortcutManager.js";
 
 class WindowManager implements AppModule {

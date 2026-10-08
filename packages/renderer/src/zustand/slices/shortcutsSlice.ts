@@ -34,7 +34,7 @@ export const createShortcutsSlice: StateCreator<
     const saved: ShortcutSettings = await send(
       "shortcuts/save-shortcuts",
       newShortcutSettings,
-    ).catch(console.error);
+    );
 
     set((state) => {
       state.shortcuts = toShortcutMap(saved);

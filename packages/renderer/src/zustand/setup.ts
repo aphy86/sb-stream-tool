@@ -76,22 +76,25 @@ export function setup() {
         });
       })
       .catch((error) => console.log(error)),
-    send("game-profile/get").then((newProfile) => {
-      const profile = getProfileById(newProfile);
-      useSettingsStore.setState({
-        gameProfile: profile,
-      });
-    }),
+    send("game-profile/get")
+      .then((newProfile) => {
+        const profile = getProfileById(newProfile);
+        useSettingsStore.setState({
+          gameProfile: profile,
+        });
+      })
+      .catch(console.error),
   ])
     .then(() => {
       console.log("All state restored");
     })
     .catch((error) => {
       throw error;
+    })
+    .finally(() => {
+      ipcSetup();
+      useSettingsStore.setState({
+        isSettingsHydrated: true,
+      });
     });
-
-  ipcSetup();
-  useSettingsStore.setState({
-    isSettingsHydrated: true,
-  });
 }

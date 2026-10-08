@@ -100,7 +100,6 @@ export class ObsController {
 
   static async disconnect() {
     await this.socket.disconnect();
-    EventStream.notify("toast", "OBS Websocket connection", `Disconnected`);
   }
 
   static playScenes(type: ObsSceneType) {
