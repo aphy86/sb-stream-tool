@@ -2,14 +2,12 @@ import { onGameProfileChange, send } from "@app/preload";
 import { useSettingsStore } from "./store";
 import { PLATFORMS, resolveEventUrl } from "@renderer/platform/registry";
 import {
-  ObsScene,
   ObsSceneSettings,
   ObsWebsocketSettings,
   ShortcutSettings,
   SlippiRelaySettings,
 } from "@app/common";
-import { defaultShortcuts } from "./slices/shortcutsSlice";
-import { Hotkey } from "@tanstack/react-hotkeys";
+import { toShortcutMap } from "./slices/shortcutsSlice";
 import { getProfileById } from "@renderer/game-profiles/registry";
 
 function ipcSetup() {
@@ -35,54 +33,23 @@ export function setup() {
         .catch((error) => console.log(error)),
     ),
     send("shortcuts/get-shortcuts")
-      .then((shortcutsList: ShortcutSettings | undefined) => {
-        if (shortcutsList === undefined) return;
-        const retrievedShortcuts = new Map(defaultShortcuts);
-        shortcutsList.forEach((shortcut) =>
-          retrievedShortcuts.set(shortcut.action, shortcut.hotkey as Hotkey),
-        );
-        useSettingsStore.setState({ shortcuts: retrievedShortcuts });
-      })
+      .then((list: ShortcutSettings) =>
+        useSettingsStore.setState({ shortcuts: toShortcutMap(list) }),
+      )
       .catch((error) => console.log(error)),
     send("obs/get-settings")
       .then(
         (settings: {
           websocket: ObsWebsocketSettings | undefined;
-          scenes: ObsSceneSettings | undefined;
+          scenes: ObsSceneSettings;
         }) => {
-          if (settings.websocket !== undefined) {
+          if (settings.websocket) {
             useSettingsStore.setState({
               websocketIp: settings.websocket.ip,
               websocketPort: settings.websocket.port,
             });
           }
-
-          if (settings.scenes !== undefined) {
-            const gameStartScenes = [] as ObsScene[];
-            const gameEndScenes = [] as ObsScene[];
-            const setEndScenes = [] as ObsScene[];
-
-            settings.scenes.forEach((scene) => {
-              switch (scene.type) {
-                case "game-start":
-                  gameStartScenes.push(scene.scene);
-                  break;
-                case "game-end":
-                  gameEndScenes.push(scene.scene);
-                  break;
-                case "set-end":
-                  setEndScenes.push(scene.scene);
-                  break;
-                default:
-                  throw new Error(`UNKNOWN TYPE`);
-              }
-            });
-            useSettingsStore.setState({
-              gameStartScenes: gameStartScenes,
-              gameEndScenes: gameEndScenes,
-              setEndScenes: setEndScenes,
-            });
-          }
+          useSettingsStore.setState({ scenes: settings.scenes });
         },
       )
       .catch((error) => console.log(error)),

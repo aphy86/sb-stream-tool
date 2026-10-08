@@ -4,7 +4,6 @@ import { ObsController } from "./components/ObsController.js";
 import { ClientToServerEvents, ServerToClientEvents } from "./types.js";
 import {
   GameProfileId,
-  ObsScene,
   ObsSceneSettings,
   ObsWebsocketSettings,
   ShortcutSettings,
@@ -15,6 +14,7 @@ import {
 import { dialog, shell } from "electron";
 import { SettingsStore } from "./components/SettingsStore.js";
 import { SlippiRelayHandler } from "./components/slippi/SlippiRelayHandler.js";
+import { ShortcutManager } from "./components/ShortcutManager.js";
 
 export type SocketRegistry = {
   [key: string]: (...args: any[]) => Promise<any> | any;
@@ -30,13 +30,8 @@ export function createHandlers(
 
     "obs/disconnect": () => ObsController.disconnect(),
 
-    "obs/update-scenes": (
-      gameStartScenes: ObsScene[],
-      gameEndScenes: ObsScene[],
-      setEndScenes: ObsScene[],
-    ) => {
-      ObsController.updateScenes(gameStartScenes, gameEndScenes, setEndScenes);
-    },
+    "obs/update-scenes": async (scenes: ObsSceneSettings) =>
+      ObsController.updateScenes(scenes),
 
     "overlay/update": (newData: Match) => {
       mainSocket.emit("sendDataToServer", newData);
@@ -52,10 +47,14 @@ export function createHandlers(
     "obs/save-websocket-settings": (newSettings: ObsWebsocketSettings) =>
       SettingsStore.writeObsWebsocketSettings(newSettings),
 
-    "obs/get-settings": () => SettingsStore.getObsSettings(),
-
-    "obs/save-scenes": (newScenes: ObsSceneSettings) =>
-      SettingsStore.writeObsScenes(newScenes),
+    "obs/get-settings": async () => {
+      const websocketSettings = await SettingsStore.getObsWebsocketSettings();
+      const scenes = ObsController.getScenes();
+      return {
+        websocket: websocketSettings,
+        scenes: scenes,
+      };
+    },
 
     "platform/get-credential": async (platform: string) =>
       SettingsStore.getPlatformApiKey(platform),
@@ -68,10 +67,14 @@ export function createHandlers(
 
     "platform/get-event-url": () => SettingsStore.getEventUrl(),
 
-    "shortcuts/get-shortcuts": async () => SettingsStore.getShortcuts(),
+    "shortcuts/get-shortcuts": async () => ShortcutManager.getShortcuts(),
 
     "shortcuts/save-shortcuts": (newSettings: ShortcutSettings) =>
-      SettingsStore.writeShortcutSettings(newSettings),
+      ShortcutManager.save(newSettings),
+
+    "shortcuts/suspend-global": () => ShortcutManager.suspendGlobalKeys(),
+
+    "shortcuts/resume-global": () => ShortcutManager.resumeGlobalKeys(),
 
     "file/open-dialog": async () => {
       const { canceled, filePaths } = await dialog.showOpenDialog({

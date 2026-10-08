@@ -9,30 +9,104 @@ import {
   SelectValue,
 } from "@renderer/components/ui/select";
 import { Spinbox } from "@renderer/components/ui/spinbox";
-import { ObsScene } from "@renderer/zustand/slices/obsScenesSlice";
+import {
+  ALL_OBS_SCENE_TYPES,
+  ObsScene,
+  ObsSceneSettings,
+  ObsSceneType,
+} from "@app/common";
 import { useSettingsStore } from "@renderer/zustand/store";
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
+
+const LABELS: Record<ObsSceneType, { option: string; heading: string }> = {
+  "game-start": {
+    option: "Game Starts",
+    heading: "When a game starts, play the following scenes:",
+  },
+  "game-end": {
+    option: "Game Ends",
+    heading: "When a game ends, play the following scenes:",
+  },
+  "set-end": {
+    option: "Set Ends",
+    heading: "When a set ends, play the following scenes:",
+  },
+};
+
+const SceneGroup = memo(function SceneGroup({
+  type,
+  scenes,
+  onRemove,
+}: {
+  type: ObsSceneType;
+  scenes: ObsScene[];
+  onRemove: (type: ObsSceneType, index: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="border-b-2 border-gray-400"></div>
+      <h2 className="text-center">{LABELS[type].heading}</h2>
+      <div className="flex flex-col gap-4">
+        {scenes.map((scene, index) => (
+          <div className="flex justify-between" key={index}>
+            <h5>
+              In {scene.start} milliseconds, switch to scene {scene.scene}
+            </h5>
+            <Button className="ml-4" onClick={() => onRemove(type, index)}>
+              Delete Scene
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 function Scenes() {
-  const savedGameStartScenes = useSettingsStore(
-    (state) => state.gameStartScenes,
-  );
-  const savedGameEndScenes = useSettingsStore((state) => state.gameEndScenes);
-  const savedSetEndScenes = useSettingsStore((state) => state.setEndScenes);
+  const saved = useSettingsStore((state) => state.scenes);
   const update = useSettingsStore((state) => state.updateScenes);
 
-  const [newSceneInput, setNewSceneInput] = useState({
+  const [draft, setDraft] = useState<ObsSceneSettings | null>(null);
+  const scenes = draft ?? saved;
+
+  const [input, setInput] = useState<{
+    scene: string;
+    start: number;
+    type: ObsSceneType;
+  }>({
     scene: "",
     start: 0,
-    where: "game-start",
+    type: "game-start",
   });
 
-  const [gameStartScenes, setGameStartScenes] =
-    useState<ObsScene[]>(savedGameStartScenes);
-  const [gameEndScenes, setGameEndScenes] =
-    useState<ObsScene[]>(savedGameEndScenes);
-  const [setEndScenes, setSetEndScenes] =
-    useState<ObsScene[]>(savedSetEndScenes);
+  const addScene = () =>
+    setDraft((d) => {
+      const current = d ?? saved;
+      return {
+        ...current,
+        [input.type]: [
+          ...current[input.type],
+          { scene: input.scene.trim(), start: input.start },
+        ],
+      };
+    });
+
+  const removeScene = useCallback(
+    (type: ObsSceneType, index: number) =>
+      setDraft((d) => {
+        const current = d ?? saved;
+        return {
+          ...current,
+          [type]: current[type].filter((_, i) => i !== index),
+        };
+      }),
+    [saved],
+  );
+
+  const save = () =>
+    update(scenes)
+      .then(() => setDraft(null))
+      .catch(console.error);
 
   return (
     <div className="flex flex-col gap-2 pb-1">
@@ -40,49 +114,16 @@ function Scenes() {
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          switch (newSceneInput.where) {
-            case "game-start":
-              setGameStartScenes([
-                ...gameStartScenes,
-                {
-                  scene: newSceneInput.scene.trim(),
-                  start: newSceneInput.start,
-                },
-              ]);
-              break;
-            case "game-end":
-              setGameEndScenes([
-                ...gameEndScenes,
-                {
-                  scene: newSceneInput.scene.trim(),
-                  start: newSceneInput.start,
-                },
-              ]);
-              break;
-            case "set-end":
-              setSetEndScenes([
-                ...setEndScenes,
-                {
-                  scene: newSceneInput.scene.trim(),
-                  start: newSceneInput.start,
-                },
-              ]);
-              break;
-            default:
-              console.log("error");
-          }
+          addScene();
         }}
       >
         <h1 className="text-center font-semibold text-xl">Add Scene</h1>
         <div>
           <Label className="pb-1">Scene Name</Label>
           <Input
-            value={newSceneInput.scene}
+            value={input.scene}
             onChange={(e) =>
-              setNewSceneInput({
-                ...newSceneInput,
-                scene: e.currentTarget.value,
-              })
+              setInput({ ...input, scene: e.currentTarget.value })
             }
             type="text"
             placeholder="Scene Name"
@@ -92,140 +133,51 @@ function Scenes() {
           <div className="w-full">
             <Label className="pb-1">Switch to scene in milliseconds</Label>
             <Spinbox
-              value={newSceneInput.start}
+              value={input.start}
               min={0}
-              onValueChange={(n) =>
-                setNewSceneInput({
-                  ...newSceneInput,
-                  start: n,
-                })
-              }
+              onValueChange={(n) => setInput({ ...input, start: n })}
               placeholder="Switch in milliseconds"
             />
           </div>
           <div className="w-full">
             <Label className="pb-1">Switch to scene when</Label>
             <Select
-              value={newSceneInput.where}
+              value={input.type}
               onValueChange={(v) =>
-                setNewSceneInput({
-                  ...newSceneInput,
-                  where: v,
-                })
+                setInput({ ...input, type: v as ObsSceneType })
               }
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="game-start">Game Starts</SelectItem>
-                <SelectItem value="game-end">Game Ends</SelectItem>
-                <SelectItem value="set-end">Set Ends</SelectItem>
+                {ALL_OBS_SCENE_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {LABELS[type].option}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-
         <Button className="w-full">Add Scene</Button>
       </form>
-      <Button
-        type="button"
-        onClick={() => {
-          update(gameStartScenes, gameEndScenes, setEndScenes);
-        }}
-      >
+
+      <Button type="button" onClick={save} disabled={draft === null}>
         Update all scenes
       </Button>
-      <div className="flex flex-col gap-4">
-        <div className="border-b-2 border-gray-400"></div>
-        <h2 className="text-center">
-          When a game starts, play the following scenes:
-        </h2>
-        <div className="flex flex-col gap-4">
-          {gameStartScenes.map((scene, index) => (
-            <div
-              className="flex justify-between"
-              key={`game-start-scene-${scene.scene}-${scene.start}`}
-            >
-              <h5>
-                In {scene.start} milliseconds, switch to scene {scene.scene}
-              </h5>
-              <Button
-                className="ml-4"
-                onClick={() =>
-                  setGameStartScenes(
-                    gameStartScenes.filter(
-                      (_, deletionIndex) => index !== deletionIndex,
-                    ),
-                  )
-                }
-              >
-                Delete Scene
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col gap-4">
-        <div className="border-b-2 border-gray-400"></div>
-        <h2 className="text-center">
-          When a game ends, play the following scenes:
-        </h2>
-        <div className="flex flex-col gap-4">
-          {gameEndScenes.map((scene, index) => (
-            <div
-              className="flex justify-between"
-              key={`game-end-scene-${scene.scene}-${scene.start}`}
-            >
-              <h5>
-                In {scene.start} milliseconds, switch to scene {scene.scene}
-              </h5>
-              <Button
-                className="ml-4"
-                onClick={() =>
-                  setGameEndScenes(
-                    gameEndScenes.filter(
-                      (_, deletionIndex) => index !== deletionIndex,
-                    ),
-                  )
-                }
-              >
-                Delete Scene
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col gap-4">
-        <div className="border-b-2 border-gray-400"></div>
-        <h2 className="text-center">
-          When a set ends, play the following scenes:
-        </h2>
-        <div className="flex flex-col gap-4">
-          {setEndScenes.map((scene, index) => (
-            <div
-              className="flex justify-between"
-              key={`set-end-scene-${scene.scene}-${scene.start}`}
-            >
-              <h5>
-                In {scene.start} milliseconds, switch to scene {scene.scene}
-              </h5>
-              <Button
-                className="ml-4"
-                onClick={() =>
-                  setSetEndScenes(
-                    setEndScenes.filter(
-                      (_, deletionIndex) => index !== deletionIndex,
-                    ),
-                  )
-                }
-              >
-                Delete Scene
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+      {draft !== null && (
+        <p className="text-center">Scene changes are not saved.</p>
+      )}
+
+      {ALL_OBS_SCENE_TYPES.map((type) => (
+        <SceneGroup
+          key={type}
+          type={type}
+          scenes={scenes[type]}
+          onRemove={removeScene}
+        />
+      ))}
       <div className="border-b-2 border-gray-400"></div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { RoundType, SetFormat } from "../types";
+import { RoundType, SetFormat } from "../types/index.js";
 
 export const roundTypes: RoundType[] = [
   "Friendlies",

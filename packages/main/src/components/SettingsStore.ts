@@ -2,6 +2,7 @@ import {
   ALL_ACTIONS,
   ALL_OBS_SCENE_TYPES,
   ALL_SLIPPI_RELAY_STATUSES,
+  fromKeys,
   GameProfileId,
   ObsScene,
   ObsSceneSettings,
@@ -228,39 +229,30 @@ export class SettingsStore {
   }
 
   static async getObsScenes() {
-    const isObsScenes = (data: any): data is ObsSceneSettings => {
-      const isObsScene = (obj: any): obj is ObsScene => {
-        return (
-          obj !== null &&
-          typeof obj === "object" &&
-          typeof obj.scene === "string" &&
-          typeof obj.start === "number"
-        );
-      };
-
-      if (!Array.isArray(data)) return false;
-
-      return data.every(
-        (scene) =>
-          scene !== null &&
-          typeof scene === "object" &&
-          ALL_OBS_SCENE_TYPES.includes(scene.type) &&
-          isObsScene(scene.scene),
+    const isObsScene = (data: any): data is ObsScene => {
+      return (
+        data !== null &&
+        typeof data === "object" &&
+        typeof data.scene === "string" &&
+        typeof data.start === "number"
       );
     };
-    const db = RocksDatabase.open(this.storePath);
 
+    const db = RocksDatabase.open(this.storePath);
+    let data;
     try {
-      const scenesJson = JSON.parse(await db.get("obs-scenes"));
-      db.close();
-      if (isObsScenes(scenesJson)) {
-        return scenesJson;
-      }
-      return undefined;
+      data = JSON.parse(await db.get("obs-scenes"));
     } catch {
+      data = undefined;
+    } finally {
       db.close();
-      return undefined;
     }
+    return fromKeys(ALL_OBS_SCENE_TYPES, (type) => {
+      const list = Array.isArray(data)
+        ? data.filter((s) => s?.type === type).map((s) => s.scene)
+        : data?.[type];
+      return Array.isArray(list) ? list.filter((s) => isObsScene(s)) : [];
+    });
   }
 
   static async writeObsWebsocketSettings(settings: ObsWebsocketSettings) {
@@ -286,15 +278,15 @@ export class SettingsStore {
     db.close();
   }
 
-  static async getObsSettings() {
-    const websocketSettings = await this.getObsWebsocketSettings();
-    const scenes = await this.getObsScenes();
+  // static async getObsSettings() {
+  //   const websocketSettings = await this.getObsWebsocketSettings();
+  //   const scenes = await this.getObsScenes();
 
-    return {
-      websocket: websocketSettings,
-      scenes: scenes,
-    };
-  }
+  //   return {
+  //     websocket: websocketSettings,
+  //     scenes: scenes,
+  //   };
+  // }
 
   static async writeGameProfile(gameProfile: GameProfileId) {
     const db = RocksDatabase.open(this.storePath);

@@ -2,7 +2,7 @@ import path from "node:path";
 import { EventStream } from "./EventStream.js";
 import { app } from "electron";
 import { mkdir } from "node:fs/promises";
-import { Tournament } from "@app/common";
+import { Match } from "@app/common";
 import fs, { outputFile } from "fs-extra";
 import { isPlainObject } from "es-toolkit";
 
@@ -94,12 +94,12 @@ export class FileHandler {
   }
 
   // writes data to text files
-  static async writeData(data: Tournament) {
+  static async writeData(data: Match) {
     const dataPath = path.join(this.resourcesRootPath, "texts");
     const errors = [] as Error[];
 
     const setPotentialErrors = await Promise.all([
-      this.write(`${dataPath}/tournament-name.txt`, data.name),
+      this.write(`${dataPath}/tournament-name.txt`, data.tournamentName),
       this.write(`${dataPath}/best-of.txt`, data.bestOf.toString()),
       this.write(`${dataPath}/round-format.txt`, data.roundFormat),
       this.write(`${dataPath}/custom-round-format.txt`, data.customRoundFormat),
@@ -116,7 +116,7 @@ export class FileHandler {
         ),
         this.write(
           `${commentatorsRootPath}/twitter.txt`,
-          data.commentators[i].twitter,
+          data.commentators[i].socials,
         ),
         this.write(
           `${commentatorsRootPath}/pronouns.txt`,
@@ -146,7 +146,7 @@ export class FileHandler {
           ),
           this.write(
             `${playerRootPath}/twitter.txt`,
-            data.teams[i].players[j].playerInfo.twitter,
+            data.teams[i].players[j].playerInfo.socials,
           ),
           this.write(
             `${playerRootPath}/character.txt`,

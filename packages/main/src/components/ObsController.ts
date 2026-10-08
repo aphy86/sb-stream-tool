@@ -1,8 +1,13 @@
 import { OBSWebSocket } from "obs-websocket-js";
 import { EventStream } from "./EventStream.js";
-import { ObsScene, ObsSceneType } from "@app/common";
+import {
+  ALL_OBS_SCENE_TYPES,
+  fromKeys,
+  ObsScene,
+  ObsSceneSettings,
+  ObsSceneType,
+} from "@app/common";
 import { SettingsStore } from "./SettingsStore.js";
-import { BrowserWindow } from "electron";
 
 class SceneCollection {
   private scenes: ObsScene[];
@@ -22,7 +27,7 @@ class SceneCollection {
     this.sceneTimeoutIds = [];
   }
 
-  async play() {
+  play() {
     this.stop();
     for (const scene of this.scenes) {
       this.sceneTimeoutIds.push(
@@ -39,36 +44,32 @@ class SceneCollection {
     }
   }
 
-  async update(newScenes: ObsScene[]) {
+  update(newScenes: ObsScene[]) {
     this.stop();
     this.scenes = newScenes;
+  }
+
+  getScenes() {
+    return this.scenes;
   }
 }
 
 export class ObsController {
   private static socket: OBSWebSocket = new OBSWebSocket();
-  private static gameStartScenes: SceneCollection = new SceneCollection(
-    this.socket,
+  private static sceneCollections = fromKeys(
+    ALL_OBS_SCENE_TYPES,
+    () => new SceneCollection(this.socket),
   );
-  private static gameEndScenes: SceneCollection = new SceneCollection(
-    this.socket,
-  );
-  private static setEndScenes: SceneCollection = new SceneCollection(
-    this.socket,
-  );
+  // private static browserWindow: BrowserWindow | null = null;
 
-  private static browserWindow: BrowserWindow | null = null;
-
-  // constructor() {
-  //   super();
-  //   this.socket = new OBSWebSocket();
-  //   this.gameStartScenes = new SceneCollection(this.socket);
-  //   this.setEndScenes = new SceneCollection(this.socket);
-  //   this.gameEndScenes = new SceneCollection(this.socket);
+  // static async setBrowserWindow(window: BrowserWindow) {
+  //   this.browserWindow = window;
   // }
 
-  static async setBrowserWindow(window: BrowserWindow) {
-    this.browserWindow = window;
+  static getScenes(): ObsSceneSettings {
+    return fromKeys(ALL_OBS_SCENE_TYPES, (type) =>
+      this.sceneCollections[type].getScenes(),
+    );
   }
 
   static async connect(
@@ -85,16 +86,15 @@ export class ObsController {
     await this.socket
       .connect(`${protocol}${url}:${port}`, password)
       .then(() => {
-        // EventStream.notify(
-        //   "OBS Websocket connection",
-        //   `Connected to ${protocol}${url}:${port}`,
-        // );
-        console.log("Connected");
+        console.log(`OBS Websocket Connected to ${protocol}${url}:${port}`);
       })
       .catch((reason) => {
-        EventStream.notify("obs", "error");
-        EventStream.notify("toast", "Obs Connection Error", reason.message);
-        console.log(`Error: ${reason}`);
+        EventStream.notify(
+          "toast",
+          "Obs Websocket Connection Error",
+          reason.message,
+        );
+        console.log(`Obs Websocket error: ${reason}`);
       });
   }
 
@@ -103,50 +103,32 @@ export class ObsController {
     EventStream.notify("toast", "OBS Websocket connection", `Disconnected`);
   }
 
-  static async playScenes(sceneCollection: ObsSceneType) {
-    switch (sceneCollection) {
-      case "game-start":
-        this.gameStartScenes.play();
-        break;
-      case "game-end":
-        this.gameEndScenes.play();
-        break;
-      case "set-end":
-        this.setEndScenes.play();
-        break;
-      default:
-        throw new Error(`Scene collection not found: ${sceneCollection}`);
+  static playScenes(type: ObsSceneType) {
+    this.sceneCollections[type].play();
+  }
+
+  static stopScenes(type: ObsSceneType) {
+    this.sceneCollections[type].stop();
+  }
+
+  private static setScenes(scenes: ObsSceneSettings) {
+    for (const type of ALL_OBS_SCENE_TYPES) {
+      this.sceneCollections[type].update(scenes[type]);
     }
   }
 
-  static async stopScenes(sceneCollection: ObsSceneType) {
-    switch (sceneCollection) {
-      case "game-start":
-        this.gameStartScenes.stop();
-        break;
-      case "game-end":
-        this.gameEndScenes.stop();
-        break;
-      case "set-end":
-        this.setEndScenes.stop();
-        break;
-      default:
-        throw new Error(`Scene collection not found: ${sceneCollection}`);
-    }
+  /**
+   *
+   * save scenes to file, and then save that to obscontroller
+   */
+  static async updateScenes(scenes: ObsSceneSettings) {
+    await SettingsStore.writeObsScenes(scenes);
+    this.setScenes(scenes);
+    EventStream.notify("toast", "OBS scenes", "OBS scenes saved!");
+    return scenes;
   }
 
-  static async updateScenes(
-    newGameStartScenes: ObsScene[],
-    newGameEndScenes: ObsScene[],
-    newSetEndScenes: ObsScene[],
-  ) {
-    this.gameStartScenes.update(newGameStartScenes);
-    this.gameEndScenes.update(newGameEndScenes);
-    this.setEndScenes.update(newSetEndScenes);
-    EventStream.notify("toast", "OBS scenes", "OBS scenes added!");
-  }
-
-  static async initEvents() {
+  static async init() {
     this.socket.on("ConnectionError", (error) => {
       console.log("OBS Websocket Connection Error");
       EventStream.notify("connection", {
@@ -191,29 +173,6 @@ export class ObsController {
       );
     });
 
-    const scenes = await SettingsStore.getObsScenes();
-    if (scenes !== undefined) {
-      const gameStartScenes = [] as ObsScene[];
-      const gameEndScenes = [] as ObsScene[];
-      const setEndScenes = [] as ObsScene[];
-      for (const scene of scenes) {
-        switch (scene.type) {
-          case "game-start":
-            gameStartScenes.push(scene.scene);
-            break;
-          case "game-end":
-            gameEndScenes.push(scene.scene);
-            break;
-          case "set-end":
-            setEndScenes.push(scene.scene);
-            break;
-          default:
-            throw new Error(
-              `UNKNOWN TYPE, idk how you even got this on a known typed value`,
-            );
-        }
-      }
-      this.updateScenes(gameStartScenes, gameEndScenes, setEndScenes);
-    }
+    this.setScenes(await SettingsStore.getObsScenes());
   }
 }

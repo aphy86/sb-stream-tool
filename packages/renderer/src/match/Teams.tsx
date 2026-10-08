@@ -4,11 +4,10 @@ import Team from "./Team";
 import { useSettingsStore } from "@renderer/zustand/store";
 import { Badge } from "lucide-react";
 import { Toggle } from "../components/ui/toggle";
-
-import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
-import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useRef } from "react";
 import { swapCharacters } from "./helpers";
+import { useShortcutKey } from "@renderer/hooks/use-shortcut-key";
 
 const Teams = withForm({
   defaultValues: MatchDefaultValues,
@@ -21,12 +20,8 @@ const Teams = withForm({
     );
 
     const teamsScreenRef = useRef<HTMLDivElement>(null);
-    const resetScoreGlobalHotkey =
-      useSettingsStore((state) => state.shortcuts.get("reset-score-global")) ??
-      (defaultShortcuts.get("reset-score-global") as Hotkey);
-
     useHotkey(
-      resetScoreGlobalHotkey,
+      useShortcutKey("reset-all-scores"),
       () => {
         for (let i = 0; i < form.getFieldValue("teams").length; i++) {
           form.resetField(`teams[${i}].score`);

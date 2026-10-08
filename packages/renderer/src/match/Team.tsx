@@ -16,9 +16,9 @@ import { Badge } from "lucide-react";
 import Player from "./Player";
 import { useRef } from "react";
 import { useSettingsStore } from "@renderer/zustand/store";
-import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
-import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { clamp } from "@renderer/utils/helpers";
+import { useShortcutKey } from "@renderer/hooks/use-shortcut-key";
 
 const Team = withForm({
   defaultValues: MatchDefaultValues,
@@ -35,27 +35,6 @@ const Team = withForm({
     );
     const teamPanelRef = useRef<HTMLDivElement>(null);
 
-    const scoreIncreaseHotkey =
-      useSettingsStore((state) => state.shortcuts.get("score-up")) ??
-      (defaultShortcuts.get("score-up") as Hotkey);
-
-    const scoreDecreaseHotkey =
-      useSettingsStore((state) => state.shortcuts.get("score-down")) ??
-      (defaultShortcuts.get("score-down") as Hotkey);
-
-    const leftUp = useSettingsStore((state) =>
-      state.shortcuts.get("team-left-score-up"),
-    );
-    const leftDown = useSettingsStore((state) =>
-      state.shortcuts.get("team-left-score-down"),
-    );
-    const rightUp = useSettingsStore((state) =>
-      state.shortcuts.get("team-right-score-up"),
-    );
-    const rightDown = useSettingsStore((state) =>
-      state.shortcuts.get("team-right-score-down"),
-    );
-
     const increaseScore = () => {
       form.setFieldValue(
         `teams[${teamNumber}].score`,
@@ -69,35 +48,13 @@ const Team = withForm({
         clamp(form.getFieldValue(`teams[${teamNumber}].score`) - 1, max, min),
       );
     };
-    useHotkey(scoreDecreaseHotkey, decreaseScore, {
+
+    useHotkey(useShortcutKey("score-up-local"), increaseScore, {
       target: teamPanelRef,
     });
-
-    useHotkey(scoreIncreaseHotkey, increaseScore, { target: teamPanelRef });
-
-    const getKeys = () => {
-      if (teamNumber === 0) {
-        return {
-          teamIncreaseKey:
-            leftUp ?? (defaultShortcuts.get("team-left-score-up") as Hotkey),
-          teamDecreaseKey:
-            leftDown ??
-            (defaultShortcuts.get("team-left-score-down") as Hotkey),
-        };
-      }
-      return {
-        teamIncreaseKey:
-          rightUp ?? (defaultShortcuts.get("team-right-score-up") as Hotkey),
-        teamDecreaseKey:
-          rightDown ??
-          (defaultShortcuts.get("team-right-score-down") as Hotkey),
-      };
-    };
-
-    const { teamIncreaseKey, teamDecreaseKey } = getKeys();
-
-    useHotkey(teamIncreaseKey, () => increaseScore());
-    useHotkey(teamDecreaseKey, () => decreaseScore());
+    useHotkey(useShortcutKey("score-down-local"), decreaseScore, {
+      target: teamPanelRef,
+    });
 
     return (
       <div tabIndex={-1} ref={teamPanelRef} className="w-full">

@@ -3,8 +3,7 @@ import { AlertCircleIcon } from "lucide-react";
 import { getPlatformByEventUrl } from "@renderer/platform/registry";
 import { useRef } from "react";
 import { MatchDefaultValues, withForm } from "@renderer/utils/form";
-import { defaultShortcuts } from "@renderer/zustand/slices/shortcutsSlice";
-import { Hotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import FetchEvent from "./sets/FetchEvent";
 import Header from "./Header";
 import Teams from "./Teams";
@@ -19,6 +18,7 @@ import {
   TabsTrigger,
 } from "@renderer/components/ui/tabs";
 import { Button } from "@renderer/components/ui/button";
+import { useShortcutKey } from "@renderer/hooks/use-shortcut-key";
 
 const Match = withForm({
   defaultValues: MatchDefaultValues,
@@ -30,11 +30,8 @@ const Match = withForm({
       (state) => state.credentials[platform.id] ?? "",
     );
     const matchScreenRef = useRef<HTMLDivElement>(null);
-    const submitHotkey =
-      useSettingsStore((state) => state.shortcuts.get("submit")) ??
-      (defaultShortcuts.get("submit") as Hotkey);
 
-    useHotkey(submitHotkey, () => form.handleSubmit(), {
+    useHotkey(useShortcutKey("submit"), () => form.handleSubmit(), {
       target: matchScreenRef,
     });
 

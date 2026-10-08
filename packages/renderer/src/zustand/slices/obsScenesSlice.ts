@@ -1,7 +1,7 @@
 import { type StateCreator } from "zustand";
 import { type StoreSliceType } from "./slice";
 import { send } from "@app/preload";
-import { ObsSceneSettings } from "@app/common";
+import { ALL_OBS_SCENE_TYPES, fromKeys, ObsSceneSettings } from "@app/common";
 
 export type ObsScene = {
   scene: string;
@@ -9,14 +9,8 @@ export type ObsScene = {
 };
 
 export type ObsScenesSlice = {
-  gameStartScenes: ObsScene[];
-  gameEndScenes: ObsScene[];
-  setEndScenes: ObsScene[];
-  updateScenes: (
-    newGameStartScenes: ObsScene[],
-    newGameEndScenes: ObsScene[],
-    newSetEndScenes: ObsScene[],
-  ) => void;
+  scenes: ObsSceneSettings;
+  updateScenes: (scenes: ObsSceneSettings) => Promise<void>;
 };
 
 export const createObsScenesSlice: StateCreator<
@@ -25,31 +19,11 @@ export const createObsScenesSlice: StateCreator<
   [],
   ObsScenesSlice
 > = (set) => ({
-  gameStartScenes: [],
-  gameEndScenes: [],
-  setEndScenes: [],
-  updateScenes: (newGameStartScenes, newGameEndScenes, newSetEndScenes) => {
+  scenes: fromKeys(ALL_OBS_SCENE_TYPES, (): ObsScene[] => []),
+  updateScenes: async (scenes) => {
+    const saved: ObsSceneSettings = await send("obs/save-scenes", scenes);
     set((state) => {
-      state.gameStartScenes = newGameStartScenes;
-      state.gameEndScenes = newGameEndScenes;
-      state.setEndScenes = newSetEndScenes;
+      state.scenes = saved;
     });
-    const allScenes = [] as ObsSceneSettings;
-    newGameStartScenes.forEach((scene) =>
-      allScenes.push({ type: "game-start", scene: scene }),
-    );
-    newGameEndScenes.forEach((scene) =>
-      allScenes.push({ type: "game-end", scene: scene }),
-    );
-    newSetEndScenes.forEach((scene) =>
-      allScenes.push({ type: "set-end", scene: scene }),
-    );
-    send( // send to ObsController
-      "obs/update-scenes",
-      newGameStartScenes,
-      newGameEndScenes,
-      newSetEndScenes,
-    ).catch((error) => console.log(error));
-    send("obs/save-scenes", allScenes).catch((error) => console.log(error)); // save to store
   },
 });

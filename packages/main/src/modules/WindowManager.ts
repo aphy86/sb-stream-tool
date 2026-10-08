@@ -14,6 +14,7 @@ import { EventStream } from "../components/EventStream.js";
 import { SlippiRelayHandler } from "../components/slippi/SlippiRelayHandler.js";
 import { ConnectionStatusCommunicator } from "../components/ConnectionStatusCommunication.js";
 import { ipcSetup } from "../ipc.js";
+import { ShortcutManager } from "../components/ShortcutManager.js";
 
 class WindowManager implements AppModule {
   readonly #preload: { path: string };
@@ -38,11 +39,11 @@ class WindowManager implements AppModule {
   async enable({ app }: ModuleContext): Promise<void> {
     FileHandler.createDirs();
     SocketioServer.enable();
-    ObsController.initEvents();
 
     await app.whenReady();
-
     ipcSetup(this.mainSocket);
+
+    await Promise.all([ObsController.init(), ShortcutManager.init()]);
 
     await this.restoreOrCreateWindow(true);
     app.on("second-instance", () => this.restoreOrCreateWindow(true));
@@ -58,14 +59,12 @@ class WindowManager implements AppModule {
     EventStream.attach("connection", connectionStatusEmitter);
   }
 
-  async attachWindow(browserWindow: BrowserWindow) {
+  async attachToWindow(browserWindow: BrowserWindow) {
+    ShortcutManager.setBrowserWindow(browserWindow);
     SlippiRelayHandler.setBrowserWindow(browserWindow);
-    ObsController.setBrowserWindow(browserWindow);
+    // ObsController.setBrowserWindow(browserWindow);
     // SlippiRelayHandler.restoreFromConfig();
     this.attachAllObservers(browserWindow);
-
-    const menu = buildMenu(browserWindow);
-    Menu.setApplicationMenu(menu);
   }
 
   async createAndSetupWindow(): Promise<BrowserWindow> {
@@ -81,7 +80,10 @@ class WindowManager implements AppModule {
       icon: join(import.meta.dirname, "..", "src", "assets", "icon.ico"),
     });
 
-    await this.attachWindow(browserWindow);
+    const menu = buildMenu(browserWindow);
+    Menu.setApplicationMenu(menu);
+
+    await this.attachToWindow(browserWindow);
 
     if (this.#renderer instanceof URL) {
       await browserWindow.loadURL(this.#renderer.href);

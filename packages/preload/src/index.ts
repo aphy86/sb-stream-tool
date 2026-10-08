@@ -3,6 +3,7 @@ import {
   SlippiGameEndData,
   Match,
   GameProfileId,
+  GlobalAction,
 } from "@app/common";
 import { ipcRenderer } from "electron";
 
@@ -58,6 +59,15 @@ function onGameProfileChange(callback: (profileId: GameProfileId) => void) {
   ipcRenderer.on("profile/change", (_event, profileId) => callback(profileId));
 }
 
+function onGlobalShortcut(callback: (action: GlobalAction) => void) {
+  const listener = (_e: Electron.IpcRendererEvent, action: GlobalAction) =>
+    callback(action);
+  ipcRenderer.on("shortcut/global-event", listener);
+  return () => {
+    ipcRenderer.removeListener("shortcut/global-event", listener);
+  };
+}
+
 export {
   send,
   updateOverlay,
@@ -68,4 +78,5 @@ export {
   clearAllListeners,
   onConnectionStatusChange,
   onGameProfileChange,
+  onGlobalShortcut,
 };
