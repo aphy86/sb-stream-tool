@@ -1,211 +1,218 @@
+import { app } from "electron";
+import {
+  accessSync,
+  constants,
+  copy,
+  ensureDir,
+  ensureDirSync,
+  outputFile,
+  remove,
+  rmdir,
+} from "fs-extra";
 import path from "node:path";
 import { EventStream } from "./EventStream.js";
-import { app } from "electron";
-import { mkdir } from "node:fs/promises";
-import { Match } from "@app/common";
-import fs, { outputFile } from "fs-extra";
-import { isPlainObject } from "es-toolkit";
+import { Match, SocialMediaAccount } from "@app/common";
+import { readdir } from "node:fs/promises";
+import { Mutex } from "es-toolkit";
 
-const getRootPath = () => {
-  let rootPath = app.getAppPath();
-  if (process.env.NODE_ENV !== "development" && process.platform == "win32") {
-    rootPath = process.env.PORTABLE_EXECUTABLE_DIR ?? "undefined";
-  }
-  return rootPath;
-};
+const isDev = process.env.NODE_ENV === "development";
 
-const getConfigRootPath = (rootPath: string) => {
-  let configRootPath = path.join(rootPath, "..", "config");
-  if (process.env.NODE_ENV !== "development" && process.platform == "win32") {
-    configRootPath = path.join(rootPath, "config");
+function getAppDir() {
+  if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    return process.env.PORTABLE_EXECUTABLE_DIR;
   }
-  return configRootPath;
-};
+  if (process.env.APPIMAGE) {
+    return path.dirname(process.env.APPIMAGE);
+  }
+  return path.dirname(app.getPath("exe"));
+}
 
-const getResourcesRootPath = (rootPath: string) => {
-  let resourcesRootPath = path.join(rootPath, "..", "resources");
-  if (process.env.NODE_ENV !== "development" && process.platform == "win32") {
-    resourcesRootPath = path.join(rootPath, "resources");
+function getRootPath() {
+  if (isDev) {
+    return path.join(app.getAppPath(), "..", "resources");
   }
-  return resourcesRootPath;
-};
+  const pathRoot = path.join(getAppDir(), "resources");
+  try {
+    ensureDirSync(pathRoot);
+    accessSync(pathRoot, constants.W_OK);
+  } catch {
+    // fallback path in case the filepath where the tool resides can't be writable
+    return path.join(app.getPath("documents"), "sb-stream-tool");
+  }
+  // ensured directory exists and can be written
+  return pathRoot;
+}
 
-const getOverlayRootPath = (rootPath: string) => {
-  let overlayRootPath = path.join(rootPath, "assets", "overlay");
-  if (process.env.NODE_ENV !== "development") {
-    overlayRootPath = path.join(process.resourcesPath, "overlay");
-  }
-  return overlayRootPath;
-};
+function getBundledAssetsRoot() {
+  return isDev ? path.join(app.getAppPath(), "assets") : process.resourcesPath;
+}
 
-const getCharactersRootPath = (rootPath: string) => {
-  let charactersRootPath = path.join(rootPath, "assets", "characters");
-  if (process.env.NODE_ENV !== "development") {
-    charactersRootPath = path.join(process.resourcesPath, "characters");
-  }
-  return charactersRootPath;
-};
-// make this less cluttered right now
 export class FileHandler {
-  private static rootPath: string = getRootPath();
-  private static configRootPath: string = getConfigRootPath(this.rootPath);
-  private static resourcesRootPath: string = getResourcesRootPath(
-    this.rootPath,
-  );
-  private static overlayRootPath: string = getOverlayRootPath(this.rootPath);
-  private static charactersRootPath: string = getCharactersRootPath(
-    this.rootPath,
-  );
-  // constructor() {
-  //   super();
-  //   this.rootPath = app.getAppPath();
-  //   this.resourcesRootPath = path.join(this.rootPath, "..", "resources");
-  //   this.configRootPath = path.join(this.rootPath, "..", "config");
-  //   this.overlayRootPath = `${this.rootPath}/assets/overlay/`;
-  //   this.charactersRootPath = `${this.rootPath}/assets/characters/`;
-  //   if (process.env.NODE_ENV !== "development") {
-  //     this.overlayRootPath = `${process.resourcesPath}/overlay/`;
-  //     this.charactersRootPath = `${process.resourcesPath}/characters/`;
-  //     if (process.platform == "win32") {
-  //       this.rootPath = process.env.PORTABLE_EXECUTABLE_DIR ?? "undefined";
-  //       this.resourcesRootPath = path.join(this.rootPath, "resources");
-  //       this.configRootPath = path.join(this.rootPath, "config");
-  //     }
-  //   }
-  // }
+  private static rootPath = getRootPath();
+  private static textsRootPath = path.join(this.rootPath, "texts");
+  private static writeMutex = new Mutex();
 
-  private static async serialize(data: any) {
-    if (data === null || data === undefined) {
-      return "";
-    } else if (Array.isArray(data) || isPlainObject(data)) {
-      return JSON.stringify(data);
-    } else if (Buffer.isBuffer(data)) {
-      return data;
-    } else {
-      return String(data);
-    }
-  }
+  static async createDirs() {
+    const assets = getBundledAssetsRoot();
 
-  private static async write(location: string, data: any) {
-    const serializedData = await this.serialize(data);
-    return outputFile(location, serializedData)
-      .then(() => undefined)
-      .catch((error: Error) => error);
-  }
-
-  // writes data to text files
-  static async writeData(data: Match) {
-    const dataPath = path.join(this.resourcesRootPath, "texts");
-    const errors = [] as Error[];
-
-    const setPotentialErrors = await Promise.all([
-      this.write(`${dataPath}/tournament-name.txt`, data.tournamentName),
-      this.write(`${dataPath}/best-of.txt`, data.bestOf.toString()),
-      this.write(`${dataPath}/round-format.txt`, data.roundFormat),
-      this.write(`${dataPath}/custom-round-format.txt`, data.customRoundFormat),
-      this.write(`${dataPath}/round-number.txt`, data.roundNumber),
-    ]);
-    errors.push(...setPotentialErrors.filter((e) => e !== undefined));
-
-    for (let i = 0; i < data.commentators.length; i++) {
-      const commentatorsRootPath = `${dataPath}/commentators/${i + 1}`;
-      const commentatorsPotentialErrors = await Promise.all([
-        this.write(
-          `${commentatorsRootPath}/name.txt`,
-          data.commentators[i].name,
+    try {
+      await Promise.all([
+        copy(
+          path.join(assets, "overlay"),
+          path.join(this.rootPath, "overlay"),
+          { overwrite: false },
         ),
-        this.write(
-          `${commentatorsRootPath}/twitter.txt`,
-          data.commentators[i].socials,
+        copy(
+          path.join(assets, "characters"),
+          path.join(this.rootPath, "characters"),
+          { overwrite: false },
         ),
-        this.write(
-          `${commentatorsRootPath}/pronouns.txt`,
-          data.commentators[i].pronouns,
-        ),
+        ensureDir(this.textsRootPath),
       ]);
-      errors.push(
-        ...commentatorsPotentialErrors.filter((e) => e !== undefined),
+    } catch (err) {
+      console.error(err);
+      EventStream.notify(
+        "toast",
+        "Output folders couldn't be created",
+        String(err),
       );
     }
+  }
 
-    for (let i = 0; i < data.teams.length; i++) {
-      for (let j = 0; j < data.teams[i].players.length; j++) {
-        const playerRootPath = `${dataPath}/teams/${i + 1}/players/${j + 1}`;
-        const playerPotentialErrors = await Promise.all([
-          this.write(
-            `${playerRootPath}/team-name.txt`,
-            data.teams[i].players[j].playerInfo.teamName,
-          ),
-          this.write(
-            `${playerRootPath}/player-tag.txt`,
-            data.teams[i].players[j].playerInfo.playerTag,
-          ),
-          this.write(
-            `${playerRootPath}/pronouns.txt`,
-            data.teams[i].players[j].playerInfo.pronouns,
-          ),
-          this.write(
-            `${playerRootPath}/twitter.txt`,
-            data.teams[i].players[j].playerInfo.socials,
-          ),
-          this.write(
-            `${playerRootPath}/character.txt`,
-            data.teams[i].players[j].gameInfo.character,
-          ),
-          this.write(
-            `${playerRootPath}/alt-costume.txt`,
-            data.teams[i].players[j].gameInfo.altCostume,
-          ),
-        ]);
-        errors.push(...playerPotentialErrors.filter((e) => e !== undefined));
+  private static async removeExtraFiles(
+    rootPath: string,
+    filesToKeep: Map<string, string>,
+  ) {
+    const entries = await readdir(rootPath, {
+      recursive: true,
+      withFileTypes: true,
+    }).catch((error) => {
+      if (error.code === "ENOENT") {
+        return [];
       }
+      throw error;
+    });
 
-      const teamRootPath = `${dataPath}/teams/${i + 1}`;
-      const teamPotentialErrors = await Promise.all([
-        this.write(`${teamRootPath}/name.txt`, data.teams[i].name),
-        this.write(`${teamRootPath}/score.txt`, data.teams[i].score),
-        this.write(
-          `${teamRootPath}/in-losers.txt`,
-          data.teams[i].inLosers ? "[L]" : "",
+    const relative = (e: (typeof entries)[number]) =>
+      path
+        .relative(this.textsRootPath, path.join(e.parentPath, e.name))
+        .split(path.sep)
+        .join("/")
+        .normalize();
+
+    await Promise.all(
+      entries
+        .filter((e) => e.isFile() && !filesToKeep.has(relative(e)))
+        .map((e) => remove(path.join(e.parentPath, e.name))),
+    );
+
+    // removes the subfolders if the file removals resulted in the folder being empty
+    const dirs = entries
+      .filter((e) => e.isDirectory())
+      .map((e) => path.join(e.parentPath, e.name))
+      .sort((a, b) => b.length - a.length);
+    for (const dir of dirs) {
+      if ((await readdir(dir)).length === 0) await rmdir(dir);
+    }
+  }
+
+  private static getSocialFileName(platform: string) {
+    const windowsReserved = /^(con|prn|aux|nul|com\d|lpt\d)$/i;
+
+    const formattedPlatform = platform
+      .normalize("NFC")
+      .toLowerCase()
+      .replace(/[\uFE00-\uFE0F\u20E3]/g, "")
+      .replace(/[^\p{L}\p{N}\p{M}]+/gu, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return windowsReserved.test(formattedPlatform)
+      ? `${formattedPlatform}-`
+      : formattedPlatform;
+  }
+
+  private static addSocials(
+    files: Map<string, string>,
+    dir: string,
+    socials: SocialMediaAccount[],
+  ) {
+    for (const account of socials) {
+      const formattedPlatform = this.getSocialFileName(account.platform);
+      if (formattedPlatform) {
+        files.set(`${dir}/socials/${formattedPlatform}.txt`, account.username);
+      }
+    }
+  }
+
+  private static async writeFiles(data: Match) {
+    const files = new Map<string, string>([
+      ["tournament-name.txt", data.tournamentName],
+      ["best-of.txt", String(data.bestOf)],
+      ["round-format.txt", data.roundFormat],
+      ["custom-round-format.txt", data.customRoundFormat],
+      ["round-number.txt", data.roundNumber ?? ""],
+    ]);
+
+    data.commentators.forEach((commentator, i) => {
+      const dir = `commentators/${i + 1}`;
+      files.set(`${dir}/name.txt`, commentator.name);
+      files.set(`${dir}/pronouns.txt`, commentator.pronouns);
+      this.addSocials(files, dir, commentator.socials);
+    });
+
+    data.teams.forEach((team, i) => {
+      const teamDir = `teams/${i + 1}`;
+      files.set(`${teamDir}/name.txt`, team.name);
+      files.set(`${teamDir}/score.txt`, String(team.score));
+      files.set(`${teamDir}/in-losers.txt`, team.inLosers ? "[L]" : "");
+      team.players.forEach(({ playerInfo, gameInfo }, j) => {
+        const dir = `${teamDir}/players/${j + 1}`;
+        files.set(`${dir}/team-name.txt`, playerInfo.teamName);
+        files.set(`${dir}/player-tag.txt`, playerInfo.playerTag);
+        files.set(`${dir}/pronouns.txt`, playerInfo.pronouns);
+        files.set(`${dir}/character.txt`, gameInfo.character);
+        files.set(`${dir}/alt-costume.txt`, gameInfo.altCostume);
+        this.addSocials(files, dir, playerInfo.socials);
+      });
+    });
+
+    const results = await Promise.allSettled(
+      [...files].map(([filePath, fileData]) =>
+        outputFile(path.join(this.textsRootPath, filePath), fileData),
+      ),
+    );
+    const errors = results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+
+    try {
+      await Promise.all(
+        ["commentators", "teams"].map((dir) =>
+          this.removeExtraFiles(path.join(this.textsRootPath, dir), files),
         ),
-      ]);
-      errors.push(...teamPotentialErrors.filter((e) => e !== undefined));
+      );
+    } catch (err) {
+      errors.push(err);
     }
 
     if (errors.length > 0) {
-      for (const error of errors) {
-        EventStream.notify("toast", error.message);
-      }
-      EventStream.notify("toast", `${errors.length} errors found`);
+      console.error(errors);
+      EventStream.notify(
+        "toast",
+        "Couldn't save files",
+        `${errors.length} failed`,
+      );
     } else {
       EventStream.notify("toast", "Data successfully saved to files!");
     }
   }
 
-  static async createDirs() {
-    // console.log(path.join(this.resourcesRootPath, "overlay"));
-    fs.copy(
-      this.overlayRootPath,
-      `${path.join(this.resourcesRootPath, "overlay")}`,
-      {
-        recursive: true,
-        overwrite: false,
-      },
-    );
-    fs.copy(
-      this.charactersRootPath,
-      `${path.join(this.resourcesRootPath, "characters")}`,
-      {
-        recursive: true,
-        overwrite: false,
-      },
-    );
-    mkdir(`${path.join(this.resourcesRootPath, "texts", "commentators")}`, {
-      recursive: true,
-    });
-    mkdir(`${path.join(this.resourcesRootPath, "texts", "teams")}`, {
-      recursive: true,
-    });
-    mkdir(this.configRootPath, { recursive: true });
+  static async writeData(data: Match) {
+    await this.writeMutex.acquire();
+    try {
+      await this.writeFiles(data);
+    } finally {
+      this.writeMutex.release();
+    }
   }
 }

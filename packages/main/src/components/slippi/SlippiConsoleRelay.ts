@@ -1,9 +1,11 @@
 import { BrowserWindow } from "electron";
 import { SlippiRelay } from "./SlippiRelay.js";
 import {
+  Command,
   ConnectionStatus,
   ConsoleConnection,
   FrameEntryType,
+  GameEndType,
   GameStartType,
   SlpParser,
   SlpStream,
@@ -14,12 +16,40 @@ import {
   SlippiGameStartData,
 } from "@app/common";
 import {
+  getSlippiGameKey,
   getStartGameData,
-  getWinner,
+  getWinners,
   isActualGame,
-  isSameGame,
 } from "./helpers.js";
 import { EventStream } from "../EventStream.js";
+
+type CurrentSlippiConsoleGame = {
+  settings: GameStartType;
+  lastFrame?: FrameEntryType;
+  allDamageDealt: number;
+};
+
+const CONNECTION_STATUSES: Record<
+  ConnectionStatus,
+  { status: string; message: string }
+> = {
+  [ConnectionStatus.CONNECTED]: {
+    status: "connected",
+    message: "Connected to",
+  },
+  [ConnectionStatus.DISCONNECTED]: {
+    status: "disconnected",
+    message: "Disconnected from",
+  },
+  [ConnectionStatus.RECONNECT_WAIT]: {
+    status: "connecting",
+    message: "Reconnecting to",
+  },
+  [ConnectionStatus.CONNECTING]: {
+    status: "connecting",
+    message: "Connecting to",
+  },
+};
 
 export class SlippiConsoleRelay implements SlippiRelay {
   private browserWindow: BrowserWindow;
@@ -28,14 +58,9 @@ export class SlippiConsoleRelay implements SlippiRelay {
   private connection: ConsoleConnection;
   private parser: SlpParser;
   private stream: SlpStream;
-  private games: Map<
-    number,
-    { settings: GameStartType | undefined; gameEnded: boolean }
-  >;
-  private gameNumber: number; // to keep track of games that have ended so duplicate game end calls won't happen, see line 127-128 of SlippiFolderRelay.ts for a general idea of what i mean
-  private previousPlayers: SlippiGameData | null;
-  private playerDamages: Map<number, number>;
-  private lastFrame: FrameEntryType | null;
+  private currentGame?: CurrentSlippiConsoleGame;
+  private previousGame: string;
+  private unsubscribers: (() => void)[];
 
   constructor(ip: string, port: number, browserWindow: BrowserWindow) {
     this.browserWindow = browserWindow;
@@ -43,163 +68,136 @@ export class SlippiConsoleRelay implements SlippiRelay {
     this.port = port;
     this.connection = new ConsoleConnection();
     this.parser = new SlpParser();
-    this.stream = new SlpStream();
-    this.gameNumber = 1;
-    this.previousPlayers = null;
-    this.games = new Map();
-    this.playerDamages = new Map();
-    this.lastFrame = null;
+    this.stream = new SlpStream({ suppressErrors: true });
+    this.previousGame = "";
+    this.unsubscribers = [];
   }
 
   async setBrowserWindow(browserWindow: BrowserWindow) {
     this.browserWindow = browserWindow;
   }
 
-  async clearPrevGame() {
-    this.playerDamages.clear();
-    this.lastFrame = null;
-    this.previousPlayers = null;
+  private sendToast(message: string) {
+    EventStream.notify("toast", "Slippi Console Relay", message);
   }
 
-  async start() {
-    // console.log("Connecting");
-    try {
-      await this.connection.connect(this.ip, this.port, true);
-    } catch (err) {
-      console.log(`Error, ${err}`);
-      return;
-    }
+  private sendStatus(status: string) {
+    EventStream.notify("connection", "slippi-wii", status);
+  }
 
-    // feeding wii data into the slpstream
-    this.connection.on("data", (data) => this.stream.process(data));
+  private sendGameStart(newGameData: SlippiGameData) {
+    const currentGameKey = getSlippiGameKey(newGameData);
 
-    // connection status changes
-    this.connection.on("connect", () =>
-      EventStream.notify("toast", `Connecting to ${this.ip}:${this.port}`),
-    ); // this for "connecting"
-    this.connection.on("statusChange", (data) => {
-      switch (data) {
-        case ConnectionStatus.CONNECTED:
-          EventStream.notify("toast", `Connected to ${this.ip}:${this.port}`);
-          EventStream.notify("connection", {
-            type: "slippi-wii",
-            status: "connected",
-          });
-          break;
-        case ConnectionStatus.DISCONNECTED:
-          EventStream.notify("toast", `Slippi Wii Relay disconnected`);
-          EventStream.notify("connection", {
-            type: "slippi-wii",
-            status: "disconnected",
-          });
+    const data: SlippiGameStartData = {
+      isTeams: newGameData.isTeams,
+      players: newGameData.players,
+      isSameGame: currentGameKey === this.previousGame,
+    };
 
-          break;
-        case ConnectionStatus.RECONNECT_WAIT:
-          EventStream.notify("toast", `Reconnecting ${this.ip}:${this.port}`);
-          EventStream.notify("connection", {
-            type: "slippi-wii",
-            status: "connecting",
-          });
-          break;
-        default:
-          EventStream.notify("toast", `Connecting to ${this.ip}:${this.port}`);
-          EventStream.notify("connection", {
-            type: "slippi-wii",
-            status: "connecting",
-          });
-      }
-    }); // this for any sort of connection success/error status changes
-    this.connection.on("error", (err) => {
-      EventStream.notify("toast", `Slippi Wii Connection error, ${err}`);
-      EventStream.notify("connection", {
-        type: "slippi-wii",
-        status: "error",
-      });
-    }); // this for purely connection errors
-
-    // any sort of event triggered will be passed onto the parser for handling
-    this.stream.on("slp-command", ({ command, payload }) =>
-      this.parser.handleCommand(command, payload),
+    this.browserWindow.webContents.send(
+      "slippi-relay/new-game-start-data",
+      data,
     );
 
-    this.parser.on("settings", (settingsData) => {
-      let game = this.games.get(this.gameNumber);
-      if (game === undefined || game === null || !game.settings) {
-        // a new game has occurred, since no game with that specific game number exists (number increases every game)
-        const newGameData = getStartGameData(settingsData);
-        if (newGameData === undefined) return;
-        this.games.set(this.gameNumber, {
-          settings: settingsData,
-          gameEnded: false,
-        });
-        const sameGame = isSameGame(newGameData, this.previousPlayers);
+    this.previousGame = currentGameKey;
+  }
 
-        const data: SlippiGameStartData = {
-          isTeams: newGameData.isTeams,
-          players: newGameData.players,
-          isSameGame: sameGame,
+  private sendGameEnd(
+    currentGameEnd: GameEndType,
+    currentGame: CurrentSlippiConsoleGame,
+  ) {
+    if (
+      isActualGame(currentGame.lastFrame?.frame, currentGame.allDamageDealt)
+    ) {
+      const winnersIndices = getWinners(
+        currentGame.settings,
+        currentGame.lastFrame,
+        currentGameEnd,
+      );
+      if (winnersIndices.length > 0) {
+        const gameEndData: SlippiGameEndData = {
+          isTeams: currentGame.settings.isTeams ?? false,
+          winners: winnersIndices,
         };
-
         this.browserWindow.webContents.send(
-          "slippi-relay/new-game-start-data",
-          data,
+          "slippi-relay/new-game-end-data",
+          gameEndData,
         );
-        this.previousPlayers = newGameData;
       }
-    });
+    }
+  }
+  async start() {
+    this.unsubscribers.push(
+      // feeding wii data into the slpstream
+      this.connection.on("data", (data) => this.stream.process(data)),
 
-    this.parser.on("finalized-frame", (frame) => {
-      this.lastFrame = frame;
-      for (const player of Object.values(frame.players)) {
-        if (player) {
-          const damage = (player.pre.percent ?? 0) - (player.post.percent ?? 0);
-          const playerNum = player.post.playerIndex ?? -999;
-          // if stock transition, don't add damage (you need to find out how much damage was dealt every frame, by using post.percent - pre.percent)
-          // e.g. pre: 200, post: 0, because of stock transition, don't add to damage
-          if (damage > 0) {
-            this.playerDamages.set(
-              playerNum,
-              (this.playerDamages.get(playerNum) ?? 0) + damage,
-            );
+      this.connection.on("statusChange", (connectionStatus) => {
+        const { status, message } = CONNECTION_STATUSES[connectionStatus];
+        this.sendToast(`${message} ${this.ip}:${this.port}`);
+        this.sendStatus(status);
+      }),
+      this.connection.on("error", (err) => {
+        this.sendToast(`Error, ${err}`);
+        this.sendStatus("error");
+      }),
+
+      // any sort of event triggered will be passed onto the parser for handling
+      this.stream.on("slp-command", ({ command, payload }) => {
+        try {
+          if (command === Command.GAME_START) {
+            this.parser.reset();
+          }
+          this.parser.handleCommand(command, payload);
+        } catch (err) {
+          console.error(err);
+        }
+      }),
+
+      this.parser.on("settings", (settingsData) => {
+        const newGameData = getStartGameData(settingsData);
+        if (newGameData === undefined) {
+          return;
+        }
+        this.sendGameStart(newGameData);
+        this.currentGame = {
+          settings: settingsData,
+          allDamageDealt: 0,
+          lastFrame: undefined,
+        };
+      }),
+
+      this.parser.on("finalized-frame", (frame) => {
+        if (!this.currentGame) return;
+        this.currentGame.lastFrame = frame;
+        for (const player of Object.values(frame.players)) {
+          if (player !== undefined) {
+            const damage =
+              (player.post.percent ?? 0) - (player.pre.percent ?? 0);
+            // if stock transition, don't add damage (you need to find out how much damage was dealt every frame, by using post.percent - pre.percent)
+            // e.g. pre: 200, post: 0, because of stock transition, don't add to damage
+            if (damage > 0) {
+              this.currentGame.allDamageDealt += damage;
+            }
           }
         }
-      }
-    });
+      }),
 
-    this.parser.on("end", (gameEnd) => {
-      let game = this.games.get(this.gameNumber);
-      if (
-        game &&
-        game.gameEnded === false &&
-        game.settings?.isTeams !== undefined
-      ) {
-        if (isActualGame(gameEnd, this.lastFrame, this.playerDamages)) {
-          const winnersIndices = getWinner(
-            game.settings,
-            this.lastFrame,
-            gameEnd,
-          );
-          if (winnersIndices.length > 0) {
-            const gameEndData: SlippiGameEndData = {
-              isTeams: game.settings.isTeams,
-              winners: winnersIndices,
-            };
-            this.browserWindow?.webContents.send(
-              "slippi-relay/new-game-end-data",
-              gameEndData,
-            );
-          }
+      this.parser.on("end", (gameEnd) => {
+        if (this.currentGame) {
+          this.sendGameEnd(gameEnd, this.currentGame);
         }
-        game.gameEnded = true;
-        this.games.set(this.gameNumber, game);
-      }
-      this.clearPrevGame();
-      this.gameNumber++;
-    });
+        this.currentGame = undefined;
+      }),
+    );
+
+    await this.connection.connect(this.ip, this.port, true);
   }
 
   async stop() {
+    this.unsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.unsubscribers = [];
     this.connection.disconnect();
-    this.clearPrevGame();
+    this.sendStatus("disconnected");
+    this.currentGame = undefined;
   }
 }

@@ -1,47 +1,20 @@
-import {
-  meleeCharacters,
-  SlippiGameData,
-  SlippiPlayer,
-  MeleeCharacter,
-  meleeAltCostumes,
-} from "@app/common";
+import { SlippiGameData, SlippiPlayer } from "@app/common";
 import {
   FrameEntryType,
   GameEndMethod,
   GameEndType,
   GameStartType,
+  PlayerType,
   PostFrameUpdateType,
   characters as characterUtils,
 } from "@slippi/slippi-js/node";
 import { TeamAggregate } from "../../types.js";
 
-export function isSameGame(
-  gameData: SlippiGameData,
-  previousPlayers: SlippiGameData | null,
-) {
-  if (
-    previousPlayers === null || // first game ever recorded
-    previousPlayers.isTeams !== gameData.isTeams ||
-    previousPlayers.players.length !== gameData.players.length
-  )
-    return false;
-  for (let i = 0; i < gameData.players.length; i++) {
-    if (gameData.players[i].length !== previousPlayers.players[i].length)
-      return false;
-    for (let j = 0; j < gameData.players[i].length; j++) {
-      if (
-        gameData.players[i][j].character !==
-          previousPlayers.players[i][j].character ||
-        gameData.players[i][j].color !== previousPlayers.players[i][j].color ||
-        gameData.players[i][j].playerId !==
-          previousPlayers.players[i][j].playerId ||
-        gameData.players[i][j].port !== previousPlayers.players[i][j].port ||
-        gameData.players[i][j].teamId !== previousPlayers.players[i][j].teamId
-      )
-        return false;
-    }
-  }
-  return true;
+const slippiPlayerKey = (player: SlippiPlayer) =>
+  `${player.port}:${player.playerId}:${player.teamId}:${player.character}:${player.color}`;
+
+export function getSlippiGameKey(game: SlippiGameData) {
+  return `${game.isTeams}|${game.players.map((team) => team.map(slippiPlayerKey).join(",")).join("/")}`;
 }
 
 /**
@@ -49,7 +22,7 @@ export function isSameGame(
  *
  * returns all winners' playerIndexes in an array
  */
-export function getWinner(
+export function getWinners(
   settings: GameStartType | undefined | null,
   lastFrame: FrameEntryType | undefined | null,
   gameEnd: GameEndType | undefined | null,
@@ -90,7 +63,7 @@ export function getWinner(
       const winnerTeamId = settings.players.find(
         (player) => player.playerIndex === firstPlace.playerIndex,
       )?.teamId;
-      if (winnerTeamId) {
+      if (winnerTeamId !== undefined) {
         return gameEnd.placements
           .filter((player) => {
             const playerTeamId = settings.players.find(
@@ -163,7 +136,7 @@ function getTeamsWinnersFallback(
   if (sortedTeams.length <= 0) return [];
 
   return sortedTeams[0].players.flatMap((player) =>
-    player.playerIndex ? [player.playerIndex] : [],
+    player.playerIndex !== undefined ? [player.playerIndex] : [],
   );
 }
 
@@ -196,109 +169,64 @@ function getFfaWinnersFallback(players: PostFrameUpdateType[]): number[] {
   );
 
   return winners.flatMap((winner) =>
-    winner.playerIndex ? [winner.playerIndex] : [],
+    winner.playerIndex !== undefined ? [winner.playerIndex] : [],
   );
 }
+
+const CHARACTER_IDS = new Set(
+  characterUtils.getAllCharacters("playable").map((c) => c.id),
+);
+
+function toSlippiPlayer(player: PlayerType): SlippiPlayer | undefined {
+  if (
+    player.characterId === undefined ||
+    !CHARACTER_IDS.has(player.characterId)
+  )
+    return undefined;
+
+  return {
+    character: characterUtils.getCharacterName(player.characterId),
+    color: characterUtils.getCharacterColorName(
+      player.characterId,
+      player.characterColor ?? 0,
+    ),
+    playerId: player.playerIndex,
+    port: player.port,
+    teamId: player.teamId ?? -1,
+    teamShade: player.teamShade,
+  };
+}
+
 export function getStartGameData(
   settings: GameStartType,
 ): SlippiGameData | undefined {
-  const playerData = [] as SlippiPlayer[][];
-  let isTeams = settings.isTeams;
-  if (!isTeams) {
-    for (const player of settings.players) {
-      playerData.push([
-        {
-          character: characterUtils.getCharacterName(
-            player.characterId as number,
-          ),
-          color: characterUtils.getCharacterColorName(
-            player.characterId as number,
-            player.characterColor as number,
-          ),
-          playerId: player.playerIndex,
-          port: player.port,
-          teamId: player.teamId as number,
-        },
-      ]);
-    }
-  } else {
-    const teamIdsToArrayIndex = new Map<number, number>(); // map each team id to the array index for easy lookups
-    for (const player of settings.players) {
-      if (player.teamId !== undefined) {
-        if (teamIdsToArrayIndex.get(player.teamId) === undefined) {
-          teamIdsToArrayIndex.set(player.teamId, playerData.length);
-          playerData.push([
-            {
-              character: characterUtils.getCharacterName(
-                player.characterId as number,
-              ),
-              color: characterUtils.getCharacterColorName(
-                player.characterId as number,
-                player.characterColor as number,
-              ),
-              playerId: player.playerIndex,
-              port: player.port,
-              teamId: player.teamId,
-              teamShade: player.teamShade,
-            },
-          ]);
-        } else {
-          let index = teamIdsToArrayIndex.get(player.teamId);
-          if (
-            index !== undefined &&
-            index < playerData.length &&
-            playerData[index].length <= 2 // <=2 because you can have 1 player on one team and 3 players on another, can't handle that right now in frontend, will do in a future update
-          ) {
-            playerData[index].push({
-              character: characterUtils.getCharacterName(
-                player.characterId as number,
-              ),
-              color: characterUtils.getCharacterColorName(
-                player.characterId as number,
-                player.characterColor as number,
-              ),
-              playerId: player.playerIndex,
-              port: player.port,
-              teamId: player.teamId,
-              teamShade: player.teamShade,
-            });
-          }
-        }
-      }
-    }
+  const players: SlippiPlayer[] = [];
+  for (const player of settings.players) {
+    const slippiPlayer = toSlippiPlayer(player);
+    if (!slippiPlayer) return undefined;
+    players.push(slippiPlayer);
   }
 
-  for (let i = 0; i < playerData.length; i++) {
-    for (let j = 0; j < playerData[i].length; j++) {
-      const player = playerData[i][j];
-      if (
-        !(meleeCharacters as string[]).includes(player.character) ||
-        !meleeAltCostumes[player.character as MeleeCharacter].colors.includes(
-          player.color,
-        )
-      ) {
-        return undefined;
-      }
-    }
+  if (!settings.isTeams) {
+    return { isTeams: false, players: players.map((player) => [player]) };
   }
 
-  return { isTeams: isTeams ?? false, players: playerData };
+  const teams = Map.groupBy(players, (p) => p.teamId);
+
+  return {
+    isTeams: true,
+    players: [...teams.values()].map((team) => team.slice(0, 3)), // slice ensures each team will have at MOST 3 players
+  };
 }
 
 export function isActualGame(
-  gameEnd: GameEndType | null | undefined,
-  lastFrame: FrameEntryType | null | undefined,
-  playerDamages: Map<number, number>,
+  lastFrame: number | null | undefined,
+  allDamageDealt: number,
 ) {
-  if (!lastFrame || !gameEnd) return false;
-  if (lastFrame.frame > 6000) return true;
-
-  let totalDamage = 0;
-  const lras = gameEnd.gameEndMethod === 7;
-
-  for (const [_, damage] of playerDamages) {
-    totalDamage += damage;
-  }
-
-  return (lras && totalDamage > 100) || (!lras && totalDamage > 100);
+  return (
+    lastFrame !== null &&
+    lastFrame !== undefined &&
+    lastFrame > 6000 &&
+    allDamageDealt > 250
+  );
 }

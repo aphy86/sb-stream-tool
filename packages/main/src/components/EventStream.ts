@@ -1,19 +1,12 @@
+type EventStreamNotificationArgs = {
+  toast: [message: string, description?: string];
+  connection: [type: string, status: string];
+};
 export interface EventSink {
   update(...args: any[]): void;
 }
 
-// export interface EventStreamBase {
-//   attach(eventStream: EventSink): void;
-
-//   detach(eventStream: EventSink): void;
-
-//   notify(...args: any[]): void;
-// }
-
-// Use Event bus pattern if the EventStream needs both static and instance classes extended from this
-// semi Event Bus pattern, the observer attaches to this, the subjects call this notify method
 export class EventStream {
-  // list of EventSinks "attached" to this EventStream
   private static observers: Map<string, EventSink[]> = new Map();
 
   static attach(eventType: string, newObserver: EventSink): void {
@@ -37,7 +30,10 @@ export class EventStream {
     console.log(`No observer found`);
   }
 
-  static notify(eventType: string, ...args: any[]): void {
+  static notify<K extends keyof EventStreamNotificationArgs>(
+    eventType: K,
+    ...args: EventStreamNotificationArgs[K]
+  ): void {
     const observers = this.observers.get(eventType);
     if (observers) {
       for (const observer of observers) {

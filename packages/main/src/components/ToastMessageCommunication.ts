@@ -10,6 +10,9 @@ export class ToastMessageCommunicator implements EventSink {
   }
 
   update(message?: string, description?: string): void {
+    if (this.browserWindow.isDestroyed()) {
+      return;
+    }
     this.browserWindow.webContents.send("toast-message", message, description);
   }
 }

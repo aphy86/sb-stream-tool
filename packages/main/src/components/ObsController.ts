@@ -60,11 +60,13 @@ export class ObsController {
     ALL_OBS_SCENE_TYPES,
     () => new SceneCollection(this.socket),
   );
-  // private static browserWindow: BrowserWindow | null = null;
 
-  // static async setBrowserWindow(window: BrowserWindow) {
-  //   this.browserWindow = window;
-  // }
+  private static sendStatus(status: string) {
+    EventStream.notify("connection", "obs-websocket", status);
+  }
+  private static sendToast(message: string) {
+    EventStream.notify("toast", "OBS WebSocket", message);
+  }
 
   static getScenes(): ObsSceneSettings {
     return fromKeys(ALL_OBS_SCENE_TYPES, (type) =>
@@ -78,23 +80,11 @@ export class ObsController {
     port: string,
     password: string,
   ) {
-    EventStream.notify(
-      "toast",
-      "OBS Websocket connection",
-      `Connecting to ${protocol}${url}:${port}`,
-    );
+    this.sendToast(`Connecting to ${protocol}${url}:${port}`);
     await this.socket
       .connect(`${protocol}${url}:${port}`, password)
-      .then(() => {
-        console.log(`OBS Websocket Connected to ${protocol}${url}:${port}`);
-      })
       .catch((reason) => {
-        EventStream.notify(
-          "toast",
-          "Obs Websocket Connection Error",
-          reason.message,
-        );
-        console.log(`Obs Websocket error: ${reason}`);
+        console.error(reason);
       });
   }
 
@@ -117,7 +107,6 @@ export class ObsController {
   }
 
   /**
-   *
    * save scenes to file, and then save that to obscontroller
    */
   static async updateScenes(scenes: ObsSceneSettings) {
@@ -129,47 +118,22 @@ export class ObsController {
 
   static async init() {
     this.socket.on("ConnectionError", (error) => {
-      console.log("OBS Websocket Connection Error");
-      EventStream.notify("connection", {
-        type: "obs-websocket",
-        status: "error",
-      });
-      EventStream.notify(
-        "toast",
-        "OBS Connection Error",
-        `Connection Error: ${error}`,
-      );
+      this.sendStatus("error");
+      this.sendToast(`Connection Error: ${error}`);
     });
 
     this.socket.on("ConnectionClosed", () => {
-      console.log("OBS Websocket Connection Closed");
-      EventStream.notify("connection", {
-        type: "obs-websocket",
-        status: "disconnected",
-      });
-      EventStream.notify("toast", "OBS Connection Closed", `Disconnected`);
+      this.sendStatus("disconnected");
+      this.sendToast(`Disconnected`);
     });
 
     this.socket.on("ConnectionOpened", () => {
-      console.log("OBS Websocket Connection Opened");
-      EventStream.notify("connection", {
-        type: "obs-websocket",
-        status: "connected",
-      });
-      EventStream.notify(
-        "toast",
-        "OBS Connection Success",
-        "Connection Opened",
-      );
+      this.sendStatus("connected");
+      this.sendToast("Connected");
     });
 
     this.socket.on("CurrentProgramSceneChanged", (scene) => {
-      console.log(`Scene Changed to ${scene.sceneName}`);
-      EventStream.notify(
-        "toast",
-        "OBS Scene Change",
-        `Scene Changed to ${scene.sceneName}`,
-      );
+      this.sendToast(`Scene Changed to ${scene.sceneName}`);
     });
 
     this.setScenes(await SettingsStore.getObsScenes());

@@ -1,184 +1,203 @@
 import chokidar, { FSWatcher } from "chokidar";
 import { SlippiRelay } from "./SlippiRelay.js";
-import { BrowserWindow } from "electron";
 import {
-  SlippiGameData,
-  SlippiGameEndData,
-  SlippiGameStartData,
-} from "@app/common";
-import {
+  Frames,
+  FramesType,
   GameEndType,
   GameStartType,
-  MetadataType,
   SlippiGame,
-  StatsType,
 } from "@slippi/slippi-js/node";
-import { SlippiSettingsData } from "../../types.js";
+import { BrowserWindow } from "electron";
+import path from "node:path";
 import { EventStream } from "../EventStream.js";
-import { getStartGameData, isSameGame } from "./helpers.js";
+import {
+  getSlippiGameKey,
+  getStartGameData,
+  getWinners,
+  isActualGame,
+} from "./helpers.js";
+import { SlippiGameEndData, SlippiGameStartData } from "@app/common";
 
 export class SlippiFolderRelay implements SlippiRelay {
+  private watcher?: FSWatcher;
+  private currentGame?: {
+    path: string;
+    game: SlippiGame;
+    started: boolean;
+    ended: boolean;
+  };
+  private previousGame: string;
   private browserWindow: BrowserWindow;
-  private watcher: FSWatcher;
   private listenPath: string;
-  private previousPlayers: SlippiGameData | null;
-  // settings field in games is used to detect if game started or not, see line 97-100 of https://github.com/project-slippi/slippi-js/blob/master/src/common/SlippiGameBase.ts
-  // possibly delete all handwarmers games tbh
-  private games: Map<string, SlippiSettingsData>;
 
   constructor(listenPath: string, browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
     this.listenPath = listenPath;
-    this.previousPlayers = null;
-    this.games = new Map();
-    this.watcher = chokidar.watch(listenPath, {
-      ignored: "!*.slp", // TODO: This doesn't work. Use regex?
+    this.browserWindow = browserWindow;
+    this.previousGame = "";
+  }
+
+  private getAllDamages(frames: FramesType, lastFrame: number) {
+    const lastPercent = new Map<number, number>();
+    let total = 0;
+    for (let f = Frames.FIRST; f <= lastFrame; f++) {
+      for (const player of Object.values(frames[f]?.players ?? {})) {
+        const { playerIndex, percent } = player?.post ?? {};
+        if (playerIndex !== undefined && percent !== undefined) {
+          const taken = percent - (lastPercent.get(playerIndex) ?? 0);
+          if (taken > 0) {
+            total += taken;
+          }
+          lastPercent.set(playerIndex, percent);
+        }
+      }
+    }
+    return total;
+  }
+
+  private isActualReplayFile(filePath: string) {
+    return path.extname(filePath) === ".slp";
+  }
+
+  setBrowserWindow(browserWindow: BrowserWindow) {
+    this.browserWindow = browserWindow;
+  }
+
+  private sendToast(message: string) {
+    EventStream.notify("toast", "Slippi Folder Relay", message);
+  }
+
+  private sendStatus(status: string) {
+    EventStream.notify("connection", "slippi-folder", status);
+  }
+
+  private sendGameEnd(
+    currentGame: SlippiGame,
+    settings: GameStartType,
+    currentGameEnd: GameEndType,
+  ) {
+    const lastFrame = currentGame.getLatestFrame();
+
+    if (
+      !isActualGame(
+        lastFrame?.frame,
+        this.getAllDamages(
+          currentGame.getFrames(),
+          lastFrame?.frame ?? Frames.FIRST,
+        ),
+      )
+    )
+      return;
+
+    const winnersIndices = getWinners(settings, lastFrame, currentGameEnd);
+
+    if (winnersIndices.length === 0) return;
+
+    const data: SlippiGameEndData = {
+      isTeams: settings.isTeams ?? false,
+      winners: winnersIndices,
+    };
+
+    this.browserWindow.webContents.send("slippi-relay/new-game-end-data", data);
+  }
+
+  private sendGameStart(settings: GameStartType) {
+    const newGameData = getStartGameData(settings);
+    if (!newGameData) return;
+
+    const currentGame = getSlippiGameKey(newGameData);
+
+    const data: SlippiGameStartData = {
+      isTeams: newGameData.isTeams,
+      players: newGameData.players,
+      isSameGame: currentGame === this.previousGame,
+    };
+
+    this.browserWindow.webContents.send(
+      "slippi-relay/new-game-start-data",
+      data,
+    );
+
+    this.previousGame = currentGame;
+  }
+
+  private update() {
+    if (!this.currentGame || this.currentGame.ended) return;
+
+    let settings: GameStartType | undefined;
+    let gameEnd: GameEndType | undefined;
+
+    try {
+      settings = this.currentGame.game.getSettings();
+      gameEnd = this.currentGame.game.getGameEnd();
+    } catch (err) {
+      console.error(err);
+      return;
+    }
+
+    if (!this.currentGame.started && settings) {
+      this.currentGame.started = true;
+      this.sendGameStart(settings);
+    }
+
+    if (this.currentGame.started && settings && gameEnd) {
+      this.currentGame.ended = true;
+      this.sendGameEnd(this.currentGame.game, settings, gameEnd);
+    }
+  }
+  async start() {
+    this.watcher = chokidar.watch(this.listenPath, {
+      ignored: (p, s) => !!s?.isFile() && !this.isActualReplayFile(p),
       depth: 0,
-      persistent: true,
-      usePolling: true,
       ignoreInitial: true,
     });
-    EventStream.notify("toast", `Saved and connected to ${listenPath}`);
-    EventStream.notify("connection", {
-      type: "slippi-folder",
-      status: "connected",
+
+    this.watcher.on("add", (p) => {
+      if (!this.isActualReplayFile(p)) return;
+      this.currentGame = {
+        path: p,
+        game: new SlippiGame(p),
+        started: false,
+        ended: false,
+      };
+      this.update();
     });
-  }
 
-  async setBrowserWindow(browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
-  }
-
-  private isActualGame(
-    metadata: MetadataType | undefined,
-    gameEnd: GameEndType | undefined,
-    stats: StatsType | undefined,
-  ) {
-    if (!metadata || !gameEnd || !stats) return false;
-
-    if (metadata.lastFrame && metadata.lastFrame > 6000) return true;
-
-    const allDamageDealt = stats.overall.map((s) => s.totalDamage);
-    const totalDamage = allDamageDealt.reduce((a, b) => a + b, 0);
-    if (totalDamage > 100) return true;
-
-    // lras = LT + RT + A + START
-    const lras = gameEnd.gameEndMethod === 7;
-
-    return (lras && totalDamage > 100) || (!lras && totalDamage > 100); // this could be better tbh ill figure it out later
-  }
-
-  async start() {
-    this.watcher?.on("change", (path) => {
-      let gameState: SlippiSettingsData["state"] | undefined,
-        settings: GameStartType | undefined,
-        gameEnd: GameEndType | undefined,
-        // metadata: MetadataType | undefined,
-        game: SlippiSettingsData | undefined;
-      try {
-        if (!this.games.get(path)?.gameDataController) {
-          // new file detected, but this doesn't necessarily mean a new game has started (possibly could be a delay between actual game starting and the file being created)
-          this.games.set(path, {
-            gameDataController: new SlippiGame(path, { processOnTheFly: true }),
-            state: {
-              settings: undefined,
-              gameEnded: false,
-            },
-          });
-        }
-        game = this.games.get(path);
-        gameState = game?.state;
-        settings = game?.gameDataController.getSettings();
-        gameEnd = game?.gameDataController.getGameEnd();
-      } catch (err) {
-        EventStream.notify("toast", "Slippi Relay Error");
-        EventStream.notify("connection", {
-          type: "slippi-folder",
-          status: "error",
-        });
-        throw err;
-        // return;
-      }
-      if (!gameState?.settings && settings) {
-        // a new game has ACTUALLY started, since the settings portion didn't exist before and there are new settings
-        const newGameData = getStartGameData(settings);
-
-        if (newGameData === undefined) return;
-        // now check if it's a runback with the same characters, and the set isn't over
-        const sameGame = isSameGame(newGameData, this.previousPlayers);
-
-        const data: SlippiGameStartData = {
-          isTeams: newGameData.isTeams,
-          players: newGameData.players,
-          isSameGame: sameGame,
+    this.watcher.on("change", (p) => {
+      if (!this.currentGame && this.isActualReplayFile(p)) {
+        this.currentGame = {
+          path: p,
+          game: new SlippiGame(p),
+          started: false,
+          ended: false,
         };
-
-        this.browserWindow.webContents.send(
-          "slippi-relay/new-game-start-data",
-          data,
-        );
-
-        this.previousPlayers = newGameData;
-      }
-      game = this.games.get(path);
-      if (game?.state) {
-        game.state.settings = settings;
-        this.games.set(path, game);
-      }
-      // 3rd condition is to avoid duplicates
-      if (
-        game &&
-        gameEnd !== undefined &&
-        game.state.gameEnded === false &&
-        game.state.settings?.isTeams !== undefined
-      ) {
-        if (
-          this.isActualGame(
-            game.gameDataController.getMetadata(),
-            gameEnd,
-            game.gameDataController.getStats(),
-          )
-        ) {
-          let gameWinners = game.gameDataController.getWinners();
-          if (gameWinners.length > 0) {
-            const gameEndData: SlippiGameEndData = {
-              isTeams: game.state.settings.isTeams,
-              winners: gameWinners.map((winner) => winner.playerIndex),
-            };
-            this.browserWindow?.webContents.send(
-              "slippi-relay/new-game-end-data",
-              gameEndData,
-            );
-            console.log(
-              `winners = ${gameEndData.winners}, isTeam = ${gameEndData.isTeams}, gameEnded = ${game.state.gameEnded}`,
-            );
-          }
+        // if the user started watching after the game ended, let the relay know
+        if (this.currentGame?.game.getGameEnd()) {
+          this.currentGame.ended = true;
         }
-        // chokidar does sometimes fire twice on one slippi file a second apart from each other: this could be because of a slight change in the file, metadata flush, some small, very minute, irrelevant change to the file/buffer via os, etc
-        // so we must ensure the file end stuff only gets read once
-        game.state.gameEnded = true;
-        this.games.set(path, game);
       }
 
-      EventStream.notify("connection", {
-        type: "slippi-folder",
-        status: "connected",
-      });
+      if (p === this.currentGame?.path) {
+        this.update();
+      }
+    });
+
+    this.watcher.on("error", (err) => {
+      console.error(err);
+      this.sendToast(`Error: ${err}`);
+      this.sendStatus("error");
+    });
+
+    this.watcher.on("ready", () => {
+      this.sendToast(`Watching ${this.listenPath} for games`);
+      this.sendStatus("connected");
     });
   }
 
   async stop() {
-    if (this.listenPath) {
-      this.watcher?.unwatch(this.listenPath);
-      this.watcher?.close();
-      this.listenPath = "";
-    }
-
-    EventStream.notify("toast", "Slippi Relay", "Stopped Relay");
-
-    EventStream.notify("connection", {
-      type: "slippi-folder",
-      status: "disconnected",
-    });
+    await this.watcher?.close();
+    this.watcher = undefined;
+    this.currentGame = undefined;
+    this.sendToast("Stopped Relay");
+    this.sendStatus("disconnected");
   }
 }

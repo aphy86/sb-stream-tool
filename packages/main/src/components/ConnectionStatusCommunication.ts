@@ -3,15 +3,19 @@ import { EventSink } from "./EventStream.js";
 
 export class ConnectionStatusCommunicator implements EventSink {
   private browserWindow: BrowserWindow;
+
   constructor(browserWindow: BrowserWindow) {
     this.browserWindow = browserWindow;
   }
 
-  update(connectionStatus: { type: string; status: string }): void {
+  update(connectionType: string, status: string): void {
+    if (this.browserWindow.isDestroyed()) {
+      return;
+    }
     this.browserWindow.webContents.send(
       "connection-status/change",
-      connectionStatus.type,
-      connectionStatus.status,
+      connectionType,
+      status,
     );
   }
 }

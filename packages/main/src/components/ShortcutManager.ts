@@ -8,6 +8,14 @@ import { BrowserWindow, globalShortcut } from "electron";
 import { EventStream } from "./EventStream.js";
 import { SettingsStore } from "./SettingsStore.js";
 
+const keyMap: Record<string, string> = {
+  ArrowUp: "Up",
+  ArrowDown: "Down",
+  ArrowLeft: "Left",
+  ArrowRight: "Right",
+  Mod: "CommandOrControl",
+  " ": "Space",
+};
 /**
  * A handler for global + local shortcuts, allows truly global shortcuts to be added via ipc calls
  */
@@ -15,14 +23,6 @@ export class ShortcutManager {
   private static browserWindow: BrowserWindow | null = null;
   private static shortcuts: ShortcutSettings = [];
   private static suspended = false;
-  private static keyMap: Record<string, string> = {
-    ArrowUp: "Up",
-    ArrowDown: "Down",
-    ArrowLeft: "Left",
-    ArrowRight: "Right",
-    Mod: "CommandOrControl",
-    " ": "Space",
-  };
 
   static async init() {
     const savedShortcuts = await SettingsStore.getShortcuts();
@@ -32,10 +32,7 @@ export class ShortcutManager {
   private static toAccelerator(hotkey: string) {
     return hotkey
       .split("+")
-      .map(
-        (key) =>
-          this.keyMap[key] ?? (key.length === 1 ? key.toUpperCase() : key),
-      )
+      .map((key) => keyMap[key] ?? (key.length === 1 ? key.toUpperCase() : key))
       .join("+");
   }
 
@@ -98,7 +95,6 @@ export class ShortcutManager {
   }
 
   /**
-   *
    * saves shortcuts, then returns the saved shortcuts back
    */
   static async save(newShortcuts: ShortcutSettings) {

@@ -11,7 +11,7 @@ export class SlippiRelayHandler {
     if (this.browserWindow === null) {
       return;
     }
-    this.relay?.stop(false);
+    this.relay?.stop();
     if (config.type === "folder") {
       this.relay = new SlippiFolderRelay(config.listenPath, this.browserWindow);
     }
@@ -22,9 +22,9 @@ export class SlippiRelayHandler {
         this.browserWindow,
       );
     }
-    if (config.type === "dolphin") {
-      console.log("dolphin");
-    }
+    // if (config.type === "dolphin") {
+    //   console.log("dolphin");
+    // }
     this.relay?.start();
   }
 
@@ -40,7 +40,7 @@ export class SlippiRelayHandler {
     return this.relay;
   }
 
-  static stopRelay(quiet: boolean) {
-    this.relay?.stop(quiet);
+  static stopRelay() {
+    this.relay?.stop();
   }
 }

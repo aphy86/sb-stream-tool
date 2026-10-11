@@ -5,59 +5,72 @@ import {
   ServerToClientEvents,
   SocketData,
 } from "../types.js";
+import { Match } from "@app/common";
 import { EventStream } from "./EventStream.js";
 
+const PORT = 20242;
+
 export class SocketioServer {
-  private static server: Server<
-    ClientToServerEvents,
-    ServerToClientEvents,
-    InterServerEvents,
-    SocketData
-  > = new Server<
-    ClientToServerEvents,
-    ServerToClientEvents,
-    InterServerEvents,
-    SocketData
-  >(20242, { cors: { origin: "*" } });
+  private static server:
+    | Server<
+        ClientToServerEvents,
+        ServerToClientEvents,
+        InterServerEvents,
+        SocketData
+      >
+    | undefined;
 
-  private static sockets: Map<string, number> = new Map();
+  private static sockets = new Map<string, number>();
+  private static connectionId = 1;
+  private static recentData: Match | undefined;
 
-  // constructor() {
-  //   super();
-  //   this.server = new Server<
-  //     ClientToServerEvents,
-  //     ServerToClientEvents,
-  //     InterServerEvents,
-  //     SocketData
-  //   >(20242, { cors: { origin: "*" } });
-  //   this.sockets = new Map();
-  // }
+  static close() {
+    this.server?.close();
+    this.server = undefined;
+    this.sockets.clear();
+  }
 
-  static async enable(): Promise<void> {
+  private static sendToast(message: string) {
+    EventStream.notify("toast", "Overlay", message);
+  }
+
+  static enable() {
+    if (this.server) {
+      return;
+    }
+
+    this.server = new Server(PORT, { cors: { origin: "*" } });
+
+    this.server.httpServer.on("error", (error) => {
+      console.error(`Socketio server error: ${error}`);
+      this.sendToast(`Couldn't start on port ${PORT}: ${error.message}`);
+      this.close();
+    });
+
     this.server.on("connection", (socket) => {
       console.log(`User ${socket.id} connected`);
-      this.sockets.set(socket.id, this.sockets.size + 1);
+      this.sockets.set(socket.id, this.connectionId);
+      this.connectionId++;
+
+      if (this.recentData) {
+        socket.emit("sendDataToClients", this.recentData);
+      }
 
       socket.on("sendDataToServer", (data) => {
-        EventStream.notify("toast", "Sending data to overlays");
+        this.recentData = data;
+        this.sendToast("Sending data to all overlays");
         socket.broadcast.emit("sendDataToClients", data);
       });
 
       socket.on("overlayUpdateSuccess", () => {
-        EventStream.notify(
-          "toast",
-          "Connected",
+        this.sendToast(
           `Overlay ${this.sockets.get(socket.id)} updated set information successfully!`,
         );
       });
 
       socket.on("disconnect", () => {
-        EventStream.notify(
-          "toast",
-          "Disconnect",
-          `Overlay ${this.sockets.get(socket.id)} disconnected`,
-        );
-        console.log(`User ${socket.id} disconnected, goodby`);
+        this.sendToast(`Overlay ${this.sockets.get(socket.id)} disconnected`);
+        console.log(`${socket.id} disconnected, goodby`);
         this.sockets.delete(socket.id);
       });
     });
