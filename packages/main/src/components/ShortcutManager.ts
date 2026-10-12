@@ -1,12 +1,12 @@
 import {
-  Action,
   DEFAULT_SHORTCUTS,
   isGlobalAction,
   ShortcutSettings,
 } from "@app/common";
-import { BrowserWindow, globalShortcut } from "electron";
+import { globalShortcut } from "electron";
 import { EventStream } from "./EventStream.js";
 import { SettingsStore } from "./SettingsStore.js";
+import { Mutex } from "es-toolkit";
 
 const keyMap: Record<string, string> = {
   ArrowUp: "Up",
@@ -20,9 +20,9 @@ const keyMap: Record<string, string> = {
  * A handler for global + local shortcuts, allows truly global shortcuts to be added via ipc calls
  */
 export class ShortcutManager {
-  private static browserWindow: BrowserWindow | null = null;
   private static shortcuts: ShortcutSettings = [];
   private static suspended = false;
+  private static shortcutMutex = new Mutex();
 
   static async init() {
     const savedShortcuts = await SettingsStore.getShortcuts();
@@ -36,18 +36,8 @@ export class ShortcutManager {
       .join("+");
   }
 
-  static setBrowserWindow(browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
-  }
-
   static getShortcuts() {
     return this.shortcuts;
-  }
-
-  private static forward(action: Action) {
-    if (this.browserWindow && !this.browserWindow.isDestroyed()) {
-      this.browserWindow.webContents.send("shortcut/global-event", action);
-    }
   }
 
   /**
@@ -71,7 +61,7 @@ export class ShortcutManager {
         try {
           if (
             !globalShortcut.register(this.toAccelerator(hotkey), () =>
-              this.forward(action),
+              EventStream.notify("global-shortcut", action),
             )
           ) {
             failedShortcuts.push(hotkey);

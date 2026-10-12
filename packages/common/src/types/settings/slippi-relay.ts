@@ -41,10 +41,17 @@ export type SlippiGameEndData = {
   winners: number[]; // all the winners' playerindexes
 };
 
-export type SlippiRelayConfig =
-  | { type: "folder"; listenPath: string }
-  | { type: "console"; ip: string; port: number }
-  | { type: "dolphin"; ip: string; port: number };
+type SlippiRelayConfigs = {
+  folder: { listenPath: string };
+  console: { ip: string; port: number };
+  dolphin: { ip: string; port: number };
+};
+
+export type SlippiRelayType = keyof SlippiRelayConfigs;
+
+export type SlippiRelayConfig<T extends SlippiRelayType = SlippiRelayType> = {
+  [K in T]: { type: K } & SlippiRelayConfigs[K];
+}[T];
 
 export type SlippiConnectionStatus = {
   type: "wii" | "dolphin" | "folder" | "none";

@@ -5,16 +5,43 @@ import {
   GameEndType,
   GameStartType,
   PlayerType,
-  PostFrameUpdateType,
   characters as characterUtils,
 } from "@slippi/slippi-js/node";
-import { TeamAggregate } from "../../types.js";
 
 const slippiPlayerKey = (player: SlippiPlayer) =>
   `${player.port}:${player.playerId}:${player.teamId}:${player.character}:${player.color}`;
 
 export function getSlippiGameKey(game: SlippiGameData) {
   return `${game.isTeams}|${game.players.map((team) => team.map(slippiPlayerKey).join(",")).join("/")}`;
+}
+
+// singles players will have their own individual teams
+type Roster = {
+  teamByPlayer: Map<number, number>;
+  playersByTeam: Map<number, number[]>;
+};
+
+type TeamStanding = {
+  team: number;
+  stocks: number;
+  percent: number;
+};
+
+function getRoster(settings: GameStartType): Roster {
+  const teamByPlayer = new Map<number, number>();
+  const playersByTeam = new Map<number, number[]>();
+
+  for (const { playerIndex, teamId } of settings.players) {
+    const team = settings.isTeams ? teamId : playerIndex;
+    if (team !== undefined) {
+      teamByPlayer.set(playerIndex, team);
+      const players = playersByTeam.get(team) ?? [];
+      players.push(playerIndex);
+      playersByTeam.set(team, players);
+    }
+  }
+
+  return { teamByPlayer, playersByTeam };
 }
 
 /**
@@ -27,150 +54,77 @@ export function getWinners(
   lastFrame: FrameEntryType | undefined | null,
   gameEnd: GameEndType | undefined | null,
 ): number[] {
-  if (!settings || !lastFrame || !gameEnd) return [];
+  if (!settings || !gameEnd) return [];
 
-  // filter out followers (e.g. nana)
+  const { teamByPlayer, playersByTeam } = getRoster(settings);
 
-  const actualPlayers = Object.values(lastFrame.players).flatMap((player) => {
-    if (!player?.post || player?.post.isFollower) return [];
+  const getPlayersInTeam = (team: number | undefined) =>
+    team === undefined ? [] : (playersByTeam.get(team) ?? []);
 
-    return [player.post];
-  });
-
-  // draw scenario
-  if (actualPlayers.every((player) => player.stocksRemaining === 0)) return [];
-
-  // winner determination fallback through lastFrame
-
-  const determineFromLastFrame =
-    (!gameEnd.gameEndMethod || gameEnd.gameEndMethod === GameEndMethod.TIME) &&
-    actualPlayers.length >= 2;
-
-  if (determineFromLastFrame) {
-    if (settings.isTeams) {
-      return getTeamsWinnersFallback(settings.players, actualPlayers);
-    }
-    return getFfaWinnersFallback(actualPlayers);
-  }
-  // winner determination through gameEnd
-  if (gameEnd.placements && gameEnd.placements.length > 0) {
-    const firstPlace = gameEnd.placements.find(
-      (player) => player.position === 0,
+  // quit-out scenario, give the win to the name who didn't quit out
+  if (
+    gameEnd.gameEndMethod === GameEndMethod.NO_CONTEST ||
+    gameEnd.gameEndMethod === GameEndMethod.UNRESOLVED
+  ) {
+    const quitterTeam = teamByPlayer.get(gameEnd.lrasInitiatorIndex ?? -1);
+    const [winningTeam, ...extraTeams] = [...playersByTeam.keys()].filter(
+      (s) => s !== quitterTeam,
     );
-    if (!firstPlace || firstPlace === undefined) return [];
+    return quitterTeam === undefined || extraTeams.length > 0
+      ? []
+      : getPlayersInTeam(winningTeam);
+  }
 
-    if (settings.isTeams) {
-      const winnerTeamId = settings.players.find(
-        (player) => player.playerIndex === firstPlace.playerIndex,
-      )?.teamId;
-      if (winnerTeamId !== undefined) {
-        return gameEnd.placements
-          .filter((player) => {
-            const playerTeamId = settings.players.find(
-              (p) => p.playerIndex === player.playerIndex,
-            )?.teamId;
-            return playerTeamId === winnerTeamId;
-          })
-          .map((p) => p.playerIndex);
+  // get all actual players in the game (e.g. no nana)
+  const actualPlayers = Object.values(lastFrame?.players ?? {}).flatMap((p) =>
+    p?.post && !p.post.isFollower ? [p.post] : [],
+  );
+
+  // both teams lost their last stock at the same time
+  if (
+    actualPlayers.length > 0 &&
+    actualPlayers.every((p) => p.stocksRemaining === 0)
+  ) {
+    return [];
+  }
+
+  // timeout
+  if (
+    (!gameEnd.gameEndMethod || gameEnd.gameEndMethod === GameEndMethod.TIME) &&
+    actualPlayers.length >= 2
+  ) {
+    const allTeamStandings = new Map<number, TeamStanding>();
+
+    for (const player of actualPlayers) {
+      const team = teamByPlayer.get(player.playerIndex ?? -1);
+      if (team !== undefined) {
+        const standing = allTeamStandings.get(team) ?? {
+          team,
+          stocks: 0,
+          percent: 0,
+        };
+        standing.stocks += player.stocksRemaining ?? 0;
+        standing.percent += player.percent ?? 0;
+        allTeamStandings.set(team, standing);
       }
     }
 
-    return [firstPlace.playerIndex];
-  }
-
-  // no determinable winner
-  return [];
-}
-
-function aggregateTeams(
-  gamePlayers: GameStartType["players"],
-  actualPlayers: PostFrameUpdateType[],
-) {
-  const teamAggregates = new Map<number, TeamAggregate>();
-
-  for (const actualPlayer of actualPlayers) {
-    const player = gamePlayers.find(
-      (p) => p.playerIndex === actualPlayer.playerIndex,
+    const [bestTeam, nextBestTeam] = [...allTeamStandings.values()].sort(
+      (a, b) => b.stocks - a.stocks || a.percent - b.percent,
     );
 
-    const teamId = player?.teamId ?? -1;
-    const existing = teamAggregates.get(teamId) ?? {
-      totalStocks: 0,
-      totalPercent: 0,
-      players: [],
-    };
+    const isTie =
+      nextBestTeam &&
+      bestTeam.stocks === nextBestTeam.stocks &&
+      bestTeam.percent === nextBestTeam.percent;
 
-    teamAggregates.set(teamId, {
-      totalStocks: existing.totalStocks + (actualPlayer.stocksRemaining ?? 0),
-      totalPercent: existing.totalPercent + (actualPlayer.percent ?? 0),
-      players: [...existing.players, actualPlayer],
-    });
+    return !bestTeam || isTie ? [] : getPlayersInTeam(bestTeam.team);
   }
 
-  return teamAggregates;
-}
-
-// function sortByPerformance(players: PostFrameUpdateType[]) {
-//   return [...players].sort((a, b) => {
-//     const stockDiff = (b.stocksRemaining ?? 0) - (a.stocksRemaining ?? 0);
-//     if (stockDiff !== 0) return stockDiff;
-
-//     return (a.percent ?? 0) - (b.percent ?? 0);
-//   });
-// }
-
-function getTeamsWinnersFallback(
-  gamePlayers: GameStartType["players"],
-  actualPlayers: PostFrameUpdateType[],
-): number[] {
-  const teamAggregates = aggregateTeams(gamePlayers, actualPlayers);
-
-  if (teamAggregates.size === 0) return [];
-
-  const sortedTeams = [...teamAggregates.values()].sort((a, b) => {
-    const stockDiff = b.totalStocks - a.totalStocks;
-    if (stockDiff !== 0) return stockDiff;
-    return a.totalPercent - b.totalPercent;
-  });
-
-  if (sortedTeams.length <= 0) return [];
-
-  return sortedTeams[0].players.flatMap((player) =>
-    player.playerIndex !== undefined ? [player.playerIndex] : [],
-  );
-}
-
-// function sortByPerformance(players: PostFrameUpdateType[]) {
-//   return [...players].sort((a, b) => {
-//     const stockDiff = (b.stocksRemaining ?? 0) - (a.stocksRemaining ?? 0);
-//     if (stockDiff !== 0) return stockDiff;
-
-//     return (a.percent ?? 0) - (b.percent ?? 0);
-//   });
-// }
-
-function getFfaWinnersFallback(players: PostFrameUpdateType[]): number[] {
-  const sortedByPerformance = [
-    ...players.sort((a, b) => {
-      const stockDiff = (b.stocksRemaining ?? 0) - (a.stocksRemaining ?? 0);
-      if (stockDiff !== 0) return stockDiff;
-
-      return (a.percent ?? 0) - (b.percent ?? 0);
-    }),
-  ];
-
-  if (sortedByPerformance.length <= 0) return [];
-
-  const topStocks = sortedByPerformance[0].stocksRemaining;
-  const topPercent = sortedByPerformance[0].percent;
-
-  const winners = sortedByPerformance.filter(
-    (p) => p.stocksRemaining === topStocks && p.percent === topPercent,
-  );
-
-  return winners.flatMap((winner) =>
-    winner.playerIndex !== undefined ? [winner.playerIndex] : [],
-  );
+  const firstPlace = gameEnd.placements.find((p) => p.position === 0);
+  return firstPlace
+    ? getPlayersInTeam(teamByPlayer.get(firstPlace.playerIndex))
+    : [];
 }
 
 const CHARACTER_IDS = new Set(

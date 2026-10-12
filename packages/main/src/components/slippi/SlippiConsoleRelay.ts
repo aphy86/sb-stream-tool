@@ -1,4 +1,3 @@
-import { BrowserWindow } from "electron";
 import { SlippiRelay } from "./SlippiRelay.js";
 import {
   Command,
@@ -52,7 +51,6 @@ const CONNECTION_STATUSES: Record<
 };
 
 export class SlippiConsoleRelay implements SlippiRelay {
-  private browserWindow: BrowserWindow;
   private ip: string;
   private port: number;
   private connection: ConsoleConnection;
@@ -61,9 +59,9 @@ export class SlippiConsoleRelay implements SlippiRelay {
   private currentGame?: CurrentSlippiConsoleGame;
   private previousGame: string;
   private unsubscribers: (() => void)[];
+  private reconnecting: boolean;
 
-  constructor(ip: string, port: number, browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
+  constructor(ip: string, port: number) {
     this.ip = ip;
     this.port = port;
     this.connection = new ConsoleConnection();
@@ -71,10 +69,7 @@ export class SlippiConsoleRelay implements SlippiRelay {
     this.stream = new SlpStream({ suppressErrors: true });
     this.previousGame = "";
     this.unsubscribers = [];
-  }
-
-  async setBrowserWindow(browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
+    this.reconnecting = false;
   }
 
   private sendToast(message: string) {
@@ -94,11 +89,7 @@ export class SlippiConsoleRelay implements SlippiRelay {
       isSameGame: currentGameKey === this.previousGame,
     };
 
-    this.browserWindow.webContents.send(
-      "slippi-relay/new-game-start-data",
-      data,
-    );
-
+    EventStream.notify("slippi-game-start", data);
     this.previousGame = currentGameKey;
   }
 
@@ -119,10 +110,7 @@ export class SlippiConsoleRelay implements SlippiRelay {
           isTeams: currentGame.settings.isTeams ?? false,
           winners: winnersIndices,
         };
-        this.browserWindow.webContents.send(
-          "slippi-relay/new-game-end-data",
-          gameEndData,
-        );
+        EventStream.notify("slippi-game-end", gameEndData);
       }
     }
   }
@@ -132,13 +120,20 @@ export class SlippiConsoleRelay implements SlippiRelay {
       this.connection.on("data", (data) => this.stream.process(data)),
 
       this.connection.on("statusChange", (connectionStatus) => {
+        if (connectionStatus === ConnectionStatus.CONNECTED) {
+          this.reconnecting = false;
+        }
+        // avoids situation where a reconnection will produce multiple logs, every 10 seconds
+        if (this.reconnecting) return;
+        if (connectionStatus === ConnectionStatus.RECONNECT_WAIT) {
+          this.reconnecting = true;
+        }
         const { status, message } = CONNECTION_STATUSES[connectionStatus];
         this.sendToast(`${message} ${this.ip}:${this.port}`);
         this.sendStatus(status);
       }),
       this.connection.on("error", (err) => {
-        this.sendToast(`Error, ${err}`);
-        this.sendStatus("error");
+        console.error(err);
       }),
 
       // any sort of event triggered will be passed onto the parser for handling

@@ -5,13 +5,11 @@ import type { AppInitConfig } from "../AppInitConfig.js";
 import { join } from "path";
 import { buildMenu } from "../Menu.js";
 import { ObsController } from "../components/ObsController.js";
-import { ToastMessageCommunicator } from "../components/ToastMessageCommunication.js";
 import { EventStream } from "../components/EventStream.js";
-import { SlippiRelayHandler } from "../components/slippi/SlippiRelayHandler.js";
-import { ConnectionStatusCommunicator } from "../components/ConnectionStatusCommunication.js";
 import { ipcSetup } from "../ipcSetup.js";
 import { ShortcutManager } from "../components/ShortcutManager.js";
 import { SettingsStore } from "../components/SettingsStore.js";
+import { IpcRendererEventSink } from "../components/IpcRendererEventSink.js";
 
 class WindowManager implements AppModule {
   readonly #preload: { path: string };
@@ -57,19 +55,30 @@ class WindowManager implements AppModule {
     app.on("activate", () => this.restoreOrCreateWindow(true));
   }
 
-  async attachAllObservers(browserWindow: BrowserWindow) {
-    const toast = new ToastMessageCommunicator(browserWindow);
-    const connectionStatusEmitter = new ConnectionStatusCommunicator(
-      browserWindow,
+  attachAllObservers(browserWindow: BrowserWindow) {
+    EventStream.attach(
+      "toast",
+      new IpcRendererEventSink("toast-message", browserWindow),
     );
-    EventStream.attach("toast", toast);
-    EventStream.attach("connection", connectionStatusEmitter);
-  }
-
-  async attachToWindow(browserWindow: BrowserWindow) {
-    ShortcutManager.setBrowserWindow(browserWindow);
-    SlippiRelayHandler.setBrowserWindow(browserWindow);
-    this.attachAllObservers(browserWindow);
+    EventStream.attach(
+      "connection",
+      new IpcRendererEventSink("connection-status/change", browserWindow),
+    );
+    EventStream.attach(
+      "slippi-game-start",
+      new IpcRendererEventSink(
+        "slippi-relay/new-game-start-data",
+        browserWindow,
+      ),
+    );
+    EventStream.attach(
+      "slippi-game-end",
+      new IpcRendererEventSink("slippi-relay/new-game-end-data", browserWindow),
+    );
+    EventStream.attach(
+      "global-shortcut",
+      new IpcRendererEventSink("shortcut/global-event", browserWindow),
+    );
   }
 
   async createAndSetupWindow(): Promise<BrowserWindow> {
@@ -88,7 +97,7 @@ class WindowManager implements AppModule {
     const menu = buildMenu(browserWindow);
     Menu.setApplicationMenu(menu);
 
-    await this.attachToWindow(browserWindow);
+    this.attachAllObservers(browserWindow);
 
     if (this.#renderer instanceof URL) {
       await browserWindow.loadURL(this.#renderer.href);

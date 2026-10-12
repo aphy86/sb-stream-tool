@@ -122,9 +122,9 @@ export class ObsController {
       this.sendToast(`Connection Error: ${error}`);
     });
 
-    this.socket.on("ConnectionClosed", () => {
+    this.socket.on("ConnectionClosed", (reason) => {
       this.sendStatus("disconnected");
-      this.sendToast(`Disconnected`);
+      this.sendToast(`Disconnected: ${reason.message}`);
     });
 
     this.socket.on("ConnectionOpened", () => {

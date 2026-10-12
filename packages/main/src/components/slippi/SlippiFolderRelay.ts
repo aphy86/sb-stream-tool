@@ -7,7 +7,6 @@ import {
   GameStartType,
   SlippiGame,
 } from "@slippi/slippi-js/node";
-import { BrowserWindow } from "electron";
 import path from "node:path";
 import { EventStream } from "../EventStream.js";
 import {
@@ -17,6 +16,7 @@ import {
   isActualGame,
 } from "./helpers.js";
 import { SlippiGameEndData, SlippiGameStartData } from "@app/common";
+import { stat } from "fs-extra";
 
 export class SlippiFolderRelay implements SlippiRelay {
   private watcher?: FSWatcher;
@@ -27,12 +27,10 @@ export class SlippiFolderRelay implements SlippiRelay {
     ended: boolean;
   };
   private previousGame: string;
-  private browserWindow: BrowserWindow;
   private listenPath: string;
 
-  constructor(listenPath: string, browserWindow: BrowserWindow) {
+  constructor(listenPath: string) {
     this.listenPath = listenPath;
-    this.browserWindow = browserWindow;
     this.previousGame = "";
   }
 
@@ -56,10 +54,6 @@ export class SlippiFolderRelay implements SlippiRelay {
 
   private isActualReplayFile(filePath: string) {
     return path.extname(filePath) === ".slp";
-  }
-
-  setBrowserWindow(browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
   }
 
   private sendToast(message: string) {
@@ -97,7 +91,7 @@ export class SlippiFolderRelay implements SlippiRelay {
       winners: winnersIndices,
     };
 
-    this.browserWindow.webContents.send("slippi-relay/new-game-end-data", data);
+    EventStream.notify("slippi-game-end", data);
   }
 
   private sendGameStart(settings: GameStartType) {
@@ -112,10 +106,7 @@ export class SlippiFolderRelay implements SlippiRelay {
       isSameGame: currentGame === this.previousGame,
     };
 
-    this.browserWindow.webContents.send(
-      "slippi-relay/new-game-start-data",
-      data,
-    );
+    EventStream.notify("slippi-game-start", data);
 
     this.previousGame = currentGame;
   }
@@ -144,7 +135,23 @@ export class SlippiFolderRelay implements SlippiRelay {
       this.sendGameEnd(this.currentGame.game, settings, gameEnd);
     }
   }
+
+  private async existsFolder(listenPath: string) {
+    if (listenPath.trim() === "") return false;
+    try {
+      return (await stat(listenPath)).isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
   async start() {
+    if (!(await this.existsFolder(this.listenPath))) {
+      this.sendToast(`Folder not found: ${this.listenPath || "(none chosen)"}`);
+      this.sendStatus("error");
+      return;
+    }
+
     this.watcher = chokidar.watch(this.listenPath, {
       ignored: (p, s) => !!s?.isFile() && !this.isActualReplayFile(p),
       ignoreInitial: true,

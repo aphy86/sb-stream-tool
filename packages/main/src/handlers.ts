@@ -86,19 +86,13 @@ export function createHandlers(): SocketRegistry {
 
     "link/open": (link: string) => shell.openExternal(link),
 
-    "slippi-relay/start": (config: SlippiRelayConfig) => {
-      SlippiRelayHandler.setup(config);
-    },
+    "slippi-relay/start": (config: SlippiRelayConfig) =>
+      SlippiRelayHandler.setup(config),
 
-    "slippi-relay/stop": () => {
-      SlippiRelayHandler.stopRelay();
-    },
+    "slippi-relay/stop": () => SlippiRelayHandler.stop(),
 
-    "slippi-relay/save-settings": (
-      newSettings: Partial<SlippiRelaySettings>,
-    ) => {
-      SettingsStore.writeSlippiRelaySettings(newSettings);
-    },
+    "slippi-relay/save-settings": (newSettings: Partial<SlippiRelaySettings>) =>
+      SettingsStore.writeSlippiRelaySettings(newSettings),
 
     "slippi-relay/get-settings": () => SettingsStore.getSlippiRelaySettings(),
 

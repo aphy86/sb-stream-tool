@@ -1,6 +1,11 @@
+import { Action, SlippiGameEndData, SlippiGameStartData } from "@app/common";
+
 type EventStreamNotificationArgs = {
   toast: [message: string, description?: string];
   connection: [type: string, status: string];
+  "slippi-game-start": [data: SlippiGameStartData];
+  "slippi-game-end": [data: SlippiGameEndData];
+  "global-shortcut": [action: Action];
 };
 export interface EventSink {
   update(...args: any[]): void;

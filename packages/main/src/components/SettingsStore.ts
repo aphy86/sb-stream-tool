@@ -98,6 +98,7 @@ export class SettingsStore {
   private static dbInstance: RocksDatabase | undefined;
 
   private static slippiRelayMutex = new Mutex();
+  private static shortcutMutex = new Mutex();
 
   private static db() {
     if (this.dbInstance === undefined) {

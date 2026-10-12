@@ -1,46 +1,40 @@
-import { SlippiRelayConfig } from "@app/common";
+import { Mutex } from "es-toolkit";
 import { SlippiRelay } from "./SlippiRelay.js";
+import { SlippiRelayConfig, SlippiRelayType } from "@app/common";
 import { SlippiFolderRelay } from "./SlippiFolderRelay.js";
-import { BrowserWindow } from "electron";
 import { SlippiConsoleRelay } from "./SlippiConsoleRelay.js";
+
+type RelayFactory = {
+  [T in SlippiRelayType]: (config: SlippiRelayConfig<T>) => SlippiRelay;
+};
+
+const relayFactories: RelayFactory = {
+  folder: (config) => new SlippiFolderRelay(config.listenPath),
+  console: (config) => new SlippiConsoleRelay(config.ip, config.port),
+  dolphin: (config) => new SlippiConsoleRelay(config.ip, config.port),
+};
 export class SlippiRelayHandler {
-  private static relay: SlippiRelay | null = null;
-  private static browserWindow: BrowserWindow | null = null;
+  private static relay: SlippiRelay | undefined;
+  private static relayMutex = new Mutex();
 
-  static setup(config: SlippiRelayConfig) {
-    if (this.browserWindow === null) {
-      return;
+  static async setup<T extends SlippiRelayType>(config: SlippiRelayConfig<T>) {
+    await this.relayMutex.acquire();
+    try {
+      await this.relay?.stop();
+      this.relay = relayFactories[config.type]?.(config);
+      await this.relay?.start();
+    } finally {
+      this.relayMutex.release();
     }
-    this.relay?.stop();
-    if (config.type === "folder") {
-      this.relay = new SlippiFolderRelay(config.listenPath, this.browserWindow);
+  }
+
+  static async stop() {
+    await this.relayMutex.acquire();
+    try {
+      await this.relay?.stop();
+      this.relay = undefined;
+    } finally {
+      this.relayMutex.release();
     }
-    if (config.type === "console") {
-      this.relay = new SlippiConsoleRelay(
-        config.ip,
-        config.port,
-        this.browserWindow,
-      );
-    }
-    // if (config.type === "dolphin") {
-    //   console.log("dolphin");
-    // }
-    this.relay?.start();
-  }
-
-  static setBrowserWindow(browserWindow: BrowserWindow) {
-    this.browserWindow = browserWindow;
-  }
-
-  static setRelay(relay: SlippiRelay) {
-    this.relay = relay;
-  }
-
-  static getRelay() {
-    return this.relay;
-  }
-
-  static stopRelay() {
-    this.relay?.stop();
   }
 }
