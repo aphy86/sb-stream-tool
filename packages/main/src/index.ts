@@ -7,8 +7,8 @@ import { hardwareAccelerationMode } from "./modules/HardwareAccelerationModule.j
 import { autoUpdater } from "./modules/AutoUpdater.js";
 import { allowInternalOrigins } from "./modules/BlockNotAllowdOrigins.js";
 import { allowExternalUrls } from "./modules/ExternalUrls.js";
-import { createShortcutsModule } from "./modules/ShortcutsModule.js";
-import { closeSettingsStore } from "./modules/SettingsStoreModule.js";
+import { createSocketioServer } from "./modules/SocketioServerModule.js";
+import { createFileHandler } from "./modules/FileHandlerModule.js";
 
 export async function initApp(initConfig: AppInitConfig) {
   const moduleRunner = createModuleRunner()
@@ -19,12 +19,11 @@ export async function initApp(initConfig: AppInitConfig) {
       }),
     )
     .init(disallowMultipleAppInstance())
+    .init(createSocketioServer())
+    .init(createFileHandler())
     .init(terminateAppOnLastWindowClose())
     .init(hardwareAccelerationMode({ enable: false }))
     .init(autoUpdater())
-    .init(closeSettingsStore())
-    .init(createShortcutsModule())
-
     // Install DevTools extension if needed
     // .init(chromeDevToolsExtension({extension: 'VUEJS3_DEVTOOLS'}))
 

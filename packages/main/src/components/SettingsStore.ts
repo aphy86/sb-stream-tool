@@ -206,6 +206,7 @@ export class SettingsStore {
   }
 
   static close() {
-    this.db().close();
+    this.dbInstance?.close();
+    this.dbInstance = undefined;
   }
 }

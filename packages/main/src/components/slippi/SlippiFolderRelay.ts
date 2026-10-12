@@ -147,7 +147,6 @@ export class SlippiFolderRelay implements SlippiRelay {
   async start() {
     this.watcher = chokidar.watch(this.listenPath, {
       ignored: (p, s) => !!s?.isFile() && !this.isActualReplayFile(p),
-      depth: 0,
       ignoreInitial: true,
     });
 

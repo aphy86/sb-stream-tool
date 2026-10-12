@@ -5,23 +5,18 @@ import type { AppInitConfig } from "../AppInitConfig.js";
 import { join } from "path";
 import { buildMenu } from "../Menu.js";
 import { ObsController } from "../components/ObsController.js";
-import { FileHandler } from "../components/FileHandler.js";
-import { io, Socket } from "socket.io-client";
-import { ClientToServerEvents, ServerToClientEvents } from "../types.js";
-import { SocketioServer } from "../components/SocketioServer.js";
 import { ToastMessageCommunicator } from "../components/ToastMessageCommunication.js";
 import { EventStream } from "../components/EventStream.js";
 import { SlippiRelayHandler } from "../components/slippi/SlippiRelayHandler.js";
 import { ConnectionStatusCommunicator } from "../components/ConnectionStatusCommunication.js";
-import { ipcSetup } from "../Ipc.js";
+import { ipcSetup } from "../ipcSetup.js";
 import { ShortcutManager } from "../components/ShortcutManager.js";
+import { SettingsStore } from "../components/SettingsStore.js";
 
 class WindowManager implements AppModule {
   readonly #preload: { path: string };
   readonly #renderer: { path: string } | URL;
   readonly #openDevTools;
-
-  private mainSocket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
   constructor({
     initConfig,
@@ -33,17 +28,29 @@ class WindowManager implements AppModule {
     this.#preload = initConfig.preload;
     this.#renderer = initConfig.renderer;
     this.#openDevTools = openDevTools;
-    this.mainSocket = io("http://localhost:20242");
+  }
+
+  setupCleanupHandlers(app: Electron.App) {
+    app.on("will-quit", () => {
+      ShortcutManager.clear();
+      SettingsStore.close();
+      ObsController.disconnect().catch(console.error);
+    });
   }
 
   async enable({ app }: ModuleContext): Promise<void> {
-    FileHandler.createDirs();
-    SocketioServer.enable();
-
+    this.setupCleanupHandlers(app);
     await app.whenReady();
-    ipcSetup(this.mainSocket);
+    ipcSetup();
 
-    await Promise.all([ObsController.init(), ShortcutManager.init()]);
+    await Promise.all([
+      ObsController.init().catch((e) =>
+        console.error(`Failed to load OBS scenes: ${e}`),
+      ),
+      ShortcutManager.init().catch((e) =>
+        console.error(`Failed to load shortcuts: ${e}`),
+      ),
+    ]);
 
     await this.restoreOrCreateWindow(true);
     app.on("second-instance", () => this.restoreOrCreateWindow(true));
@@ -62,8 +69,6 @@ class WindowManager implements AppModule {
   async attachToWindow(browserWindow: BrowserWindow) {
     ShortcutManager.setBrowserWindow(browserWindow);
     SlippiRelayHandler.setBrowserWindow(browserWindow);
-    // ObsController.setBrowserWindow(browserWindow);
-    // SlippiRelayHandler.restoreFromConfig();
     this.attachAllObservers(browserWindow);
   }
 

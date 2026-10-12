@@ -75,4 +75,10 @@ export class SocketioServer {
       });
     });
   }
+
+  static emit(data: Match) {
+    this.recentData = data;
+    this.sendToast("Sending data to all overlays");
+    this.server?.emit("sendDataToClients", data);
+  }
 }

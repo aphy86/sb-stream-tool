@@ -1,7 +1,5 @@
-import { Socket } from "socket.io-client";
 import { FileHandler } from "./components/FileHandler.js";
 import { ObsController } from "./components/ObsController.js";
-import { ClientToServerEvents, ServerToClientEvents } from "./types.js";
 import {
   GameProfileId,
   ObsSceneSettings,
@@ -15,14 +13,13 @@ import { dialog, shell } from "electron";
 import { SettingsStore } from "./components/SettingsStore.js";
 import { SlippiRelayHandler } from "./components/slippi/SlippiRelayHandler.js";
 import { ShortcutManager } from "./components/ShortcutManager.js";
+import { SocketioServer } from "./components/SocketioServer.js";
 
 export type SocketRegistry = {
   [key: string]: (...args: any[]) => Promise<any> | any;
 };
 
-export function createHandlers(
-  mainSocket: Socket<ServerToClientEvents, ClientToServerEvents>,
-): SocketRegistry {
+export function createHandlers(): SocketRegistry {
   return {
     "obs/connect": (ip: string, port: string, password: string) => {
       ObsController.connect("ws://", ip, port, password);
@@ -34,7 +31,7 @@ export function createHandlers(
       ObsController.updateScenes(scenes),
 
     "overlay/update": (newData: Match) => {
-      mainSocket.emit("sendDataToServer", newData);
+      SocketioServer.emit(newData);
       FileHandler.writeData(newData);
     },
 
@@ -94,11 +91,7 @@ export function createHandlers(
     },
 
     "slippi-relay/stop": () => {
-      SlippiRelayHandler.stopRelay(false);
-    },
-
-    "slippi-relay/auto-stop": () => {
-      SlippiRelayHandler.stopRelay(true);
+      SlippiRelayHandler.stopRelay();
     },
 
     "slippi-relay/save-settings": (
