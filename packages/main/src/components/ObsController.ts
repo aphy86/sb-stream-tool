@@ -3,6 +3,7 @@ import { EventStream } from "./EventStream.js";
 import {
   ALL_OBS_SCENE_TYPES,
   fromKeys,
+  ObsConnectionStatus,
   ObsScene,
   ObsSceneSettings,
   ObsSceneType,
@@ -61,7 +62,7 @@ export class ObsController {
     () => new SceneCollection(this.socket),
   );
 
-  private static sendStatus(status: string) {
+  private static sendStatus(status: ObsConnectionStatus) {
     EventStream.notify("connection", "obs-websocket", status);
   }
   private static sendToast(message: string) {

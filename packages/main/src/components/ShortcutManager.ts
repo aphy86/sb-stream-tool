@@ -8,7 +8,7 @@ import { EventStream } from "./EventStream.js";
 import { SettingsStore } from "./SettingsStore.js";
 import { Mutex } from "es-toolkit";
 
-const keyMap: Record<string, string> = {
+const KEY_MAP: Record<string, string> = {
   ArrowUp: "Up",
   ArrowDown: "Down",
   ArrowLeft: "Left",
@@ -22,7 +22,7 @@ const keyMap: Record<string, string> = {
 export class ShortcutManager {
   private static shortcuts: ShortcutSettings = [];
   private static suspended = false;
-  private static shortcutMutex = new Mutex();
+  private static shortcutsMutex = new Mutex();
 
   static async init() {
     const savedShortcuts = await SettingsStore.getShortcuts();
@@ -30,9 +30,15 @@ export class ShortcutManager {
   }
 
   private static toAccelerator(hotkey: string) {
-    return hotkey
-      .split("+")
-      .map((key) => keyMap[key] ?? (key.length === 1 ? key.toUpperCase() : key))
+    // Electron stores + as "Plus", so we have to account for that
+    const endsWithPlus = hotkey === "+" || hotkey.endsWith("++");
+    const keyCombo = endsWithPlus
+      ? [...hotkey.slice(0, -1).split("+").filter(Boolean), "Plus"]
+      : hotkey.split("+");
+    return keyCombo
+      .map(
+        (key) => KEY_MAP[key] ?? (key.length === 1 ? key.toUpperCase() : key),
+      )
       .join("+");
   }
 
@@ -88,10 +94,15 @@ export class ShortcutManager {
    * saves shortcuts, then returns the saved shortcuts back
    */
   static async save(newShortcuts: ShortcutSettings) {
-    const shortcuts = this.merge(this.shortcuts, newShortcuts);
-    await SettingsStore.writeShortcutSettings(shortcuts);
-    this.register(shortcuts);
-    return shortcuts;
+    await this.shortcutsMutex.acquire();
+    try {
+      const shortcuts = this.merge(this.shortcuts, newShortcuts);
+      await SettingsStore.writeShortcutSettings(shortcuts);
+      this.register(shortcuts);
+      return shortcuts;
+    } finally {
+      this.shortcutsMutex.release();
+    }
   }
 
   /**
